@@ -7,12 +7,14 @@
   "author": "Aleksandr Taperik <alexandr1696@hotmail.com>",
   "license": "MIT",
   "scripts": {
-    "build": "rollup -c rollup.config.js"
+    "build": "rollup -c rollup.config.js",
+    "ts": "tsc"
   },
   "devDependencies": {
+    "@rollup/plugin-commonjs": "14.0.0",
     "@rollup/plugin-node-resolve": "8.4.0",
-    "@rollup/plugin-typescript": "5.0.2",
     "rollup": "2.23.1",
+    "rollup-plugin-typescript2": "0.27.2",
     "tslib": "2.0.1",
     "typescript": "3.9.7"
   },
