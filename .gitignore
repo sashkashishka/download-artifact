@@ -1,0 +1,12 @@
+.yarn
+!.yarn/releases
+!.yarn/plugins
+.pnp.js
+.vscode/
+.vim/
+*.txt
+*.log
+*.zip
+.idea/
+.DS_Store
+node_modules/

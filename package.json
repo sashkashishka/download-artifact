@@ -1,0 +1,23 @@
+{
+  "name": "download-artifact-outside",
+  "version": "1.0.0",
+  "description": "download a github action's artifact outside current project",
+  "main": "dist/index.js",
+  "repository": "git@github.com:sashkashishka/download-artifact-outside.git",
+  "author": "Aleksandr Taperik <alexandr1696@hotmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "build": "rollup -c rollup.config.js"
+  },
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "8.4.0",
+    "@rollup/plugin-typescript": "5.0.2",
+    "rollup": "2.23.1",
+    "tslib": "2.0.1",
+    "typescript": "3.9.7"
+  },
+  "dependencies": {
+    "@actions/core": "1.2.4",
+    "@actions/github": "4.0.0"
+  }
+}
