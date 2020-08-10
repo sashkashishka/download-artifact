@@ -50,15 +50,19 @@ async function run(): Promise<void> {
       ),
     )(workflowList.data.workflows);
 
-    const artifactList = octokit.actions.listWorkflowRunArtifacts({
+    const artifactList = await octokit.actions.listWorkflowRunArtifacts({
       owner,
       repo,
       run_id: R.defaultTo(0)(currWorkflow?.id),
     });
 
-    console.log(artifactList)
-    console.log(path.replace('~', homedir()))
-    console.log(github)
+    console.log('currWorkflow', currWorkflow)
+    console.log('')
+    console.log('artifactList', artifactList)
+    console.log('')
+    console.log('homedir', homedir())
+    console.log('')
+    console.log('github', github)
 
   } catch (e) {
     core.setFailed(e.message);

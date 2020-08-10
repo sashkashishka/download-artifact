@@ -7226,14 +7226,18 @@ function run() {
                 repo,
             });
             const currWorkflow = find$1(compose(test(new RegExp(workflow)), prop('path')))(workflowList.data.workflows);
-            const artifactList = octokit.actions.listWorkflowRunArtifacts({
+            const artifactList = yield octokit.actions.listWorkflowRunArtifacts({
                 owner,
                 repo,
                 run_id: defaultTo(0)(currWorkflow === null || currWorkflow === void 0 ? void 0 : currWorkflow.id),
             });
-            console.log(artifactList);
-            console.log(path.replace('~', os.homedir()));
-            console.log(github$1);
+            console.log('currWorkflow', currWorkflow);
+            console.log('');
+            console.log('artifactList', artifactList);
+            console.log('');
+            console.log('homedir', os.homedir());
+            console.log('');
+            console.log('github', github$1);
         }
         catch (e) {
             core.setFailed(e.message);
