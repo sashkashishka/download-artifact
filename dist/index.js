@@ -7216,6 +7216,7 @@ function run() {
             const githubToken = core.getInput(Inputs.GithubToken, { required: true });
             const repo = defaultTo(github.context.repo.repo)(core.getInput(Inputs.Repo, { required: false }));
             const owner = defaultTo(github.context.repo.owner)(core.getInput(Inputs.Owner, { required: false }));
+            const branch = defaultTo('master')(core.getInput(Inputs.Branch, { required: false }));
             let path = core.getInput(Inputs.Path, { required: false });
             if (path.indexOf('~') === 0) {
                 path = path.replace('~', os.homedir());
@@ -7226,14 +7227,16 @@ function run() {
                 repo,
             });
             const currWorkflow = find$1(compose(test(new RegExp(workflow)), prop('path')))(workflowList.data.workflows);
-            core.info(JSON.stringify(currWorkflow));
-            const artifactList = yield octokit.actions.listWorkflowRunArtifacts({
+            core.info(JSON.stringify(currWorkflow, null, ' '));
+            const workflowRuns = yield octokit.actions.listWorkflowRuns({
                 owner,
                 repo,
-                run_id: defaultTo(0)(currWorkflow === null || currWorkflow === void 0 ? void 0 : currWorkflow.id),
+                workflow_id: defaultTo(0)(currWorkflow === null || currWorkflow === void 0 ? void 0 : currWorkflow.id),
+                status: 'completed',
+                branch,
             });
             console.log('');
-            console.log('artifactList', artifactList);
+            core.info(JSON.stringify(workflowRuns, null, ' '));
             console.log('');
             console.log('homedir', os.homedir());
             console.log('');

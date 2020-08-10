@@ -28,6 +28,9 @@ async function run(): Promise<void> {
     const owner = R.defaultTo(github.context.repo.owner)(
       core.getInput(Inputs.Owner, { required: false })
     );
+    const branch = R.defaultTo('master')(
+      core.getInput(Inputs.Branch, { required: false })
+    );
     let path = core.getInput(Inputs.Path, { required: false });
 
     if (path.indexOf('~') === 0) {
@@ -50,16 +53,18 @@ async function run(): Promise<void> {
       ),
     )(workflowList.data.workflows);
 
-    core.info(JSON.stringify(currWorkflow))
+    core.info(JSON.stringify(currWorkflow, null, ' '))
 
-    const artifactList = await octokit.actions.listWorkflowRunArtifacts({
+    const workflowRuns = await octokit.actions.listWorkflowRuns({
       owner,
       repo,
-      run_id: R.defaultTo(0)(currWorkflow?.id),
+      workflow_id: R.defaultTo(0)(currWorkflow?.id),
+      status: 'completed',
+      branch,
     });
 
     console.log('')
-    console.log('artifactList', artifactList)
+    core.info(JSON.stringify(workflowRuns, null, ' '))
     console.log('')
     console.log('homedir', homedir())
     console.log('')
