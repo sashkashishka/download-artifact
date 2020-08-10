@@ -7226,12 +7226,12 @@ function run() {
                 repo,
             });
             const currWorkflow = find$1(compose(test(new RegExp(workflow)), prop('path')))(workflowList.data.workflows);
+            core.info(JSON.stringify(currWorkflow));
             const artifactList = yield octokit.actions.listWorkflowRunArtifacts({
                 owner,
                 repo,
                 run_id: defaultTo(0)(currWorkflow === null || currWorkflow === void 0 ? void 0 : currWorkflow.id),
             });
-            console.log('currWorkflow', currWorkflow);
             console.log('');
             console.log('artifactList', artifactList);
             console.log('');

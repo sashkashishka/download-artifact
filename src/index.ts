@@ -50,13 +50,14 @@ async function run(): Promise<void> {
       ),
     )(workflowList.data.workflows);
 
+    core.info(JSON.stringify(currWorkflow))
+
     const artifactList = await octokit.actions.listWorkflowRunArtifacts({
       owner,
       repo,
       run_id: R.defaultTo(0)(currWorkflow?.id),
     });
 
-    console.log('currWorkflow', currWorkflow)
     console.log('')
     console.log('artifactList', artifactList)
     console.log('')
