@@ -1,24 +1,67 @@
+import { homedir } from 'os';
 import * as core from '@actions/core';
 import * as github from '@actions/github';
+import * as OctokitTypes from '@octokit/types';
+import * as artifact from '@actions/artifact';
+import * as R from 'ramda';
 
 enum Inputs {
   Name = 'name',
-  Path = 'path'
+  Workflow = 'workflow',
+  Path = 'path',
+  Repo = 'repo',
+  Owner = 'owner',
+  GithubToken = 'github_token',
+  Commit = 'commit',
+  Branch = 'branch',
+  PR = 'pr',
 }
 
-async function run() {
+async function run(): Promise<void> {
   try {
-    const name = core.getInput(Inputs.Name, {required: false})
-    const path = core.getInput(Inputs.Path, {required: false})
+    const name = core.getInput(Inputs.Name, { required: true });
+    const workflow = core.getInput(Inputs.Workflow, { required: true });
+    const githubToken = core.getInput(Inputs.GithubToken, { required: true });
+    const repo = R.defaultTo(github.context.repo.repo)(
+      core.getInput(Inputs.Repo, { required: false })
+    );
+    const owner = R.defaultTo(github.context.repo.owner)(
+      core.getInput(Inputs.Owner, { required: false })
+    );
+    let path = core.getInput(Inputs.Path, { required: false });
 
-    const octokit = github.getOctokit('')
+    if (path.indexOf('~') === 0) {
+      path = path.replace('~', homedir());
+    }
 
-    console.log(name)
-    console.log(path)
-    console.log(octokit)
+    const octokit = github.getOctokit(githubToken);
 
-  } catch(e) {
+    const workflowList = await octokit.actions.listRepoWorkflows({
+      owner,
+      repo,
+    });
 
+    type WorkflowItem = OctokitTypes.ActionsListRepoWorkflowsResponseData['workflows'][0];
+
+    const currWorkflow = R.find<WorkflowItem>(
+      R.compose(
+        R.test(new RegExp(workflow)),
+        R.prop('path'),
+      ),
+    )(workflowList.data.workflows);
+
+    const artifactList = octokit.actions.listWorkflowRunArtifacts({
+      owner,
+      repo,
+      run_id: R.defaultTo(0)(currWorkflow?.id),
+    });
+
+    console.log(artifactList)
+    console.log(path.replace('~', homedir()))
+    console.log(github)
+
+  } catch (e) {
+    core.setFailed(e.message);
   }
 }
 

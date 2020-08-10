@@ -4,10 +4,23 @@ author: 'sashkashishka'
 inputs: 
   name:
     description: 'Artifact name'
-    required: false
+    required: true
+  github_token:
+    description: 'Github access token'
+    required: true
+  workflow:
+    description: 'Workflows file name with extension'
+    required: true
   path:
-    description: 'Destination path'
+    description: 'Destination path. If not specified - defaults to root of project'
     required: false
+  owner:
+    description: 'Owner of repository. If not specified - defaults to current'
+    required: false
+  repo:
+    description: 'Name of the repository. If not specified - defaults to current'
+    required: false
+  
 runs:
   using: 'node12'
   main: 'dist/index.js'
