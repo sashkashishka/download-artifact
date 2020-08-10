@@ -6275,6 +6275,34 @@ var reduce =
 /*#__PURE__*/
 _curry3(_reduce);
 
+/**
+ * Returns a function that always returns the given value. Note that for
+ * non-primitives the value returned is a reference to the original value.
+ *
+ * This function is known as `const`, `constant`, or `K` (for K combinator) in
+ * other languages and libraries.
+ *
+ * @func
+ * @memberOf R
+ * @since v0.1.0
+ * @category Function
+ * @sig a -> (* -> a)
+ * @param {*} val The value to wrap in a function
+ * @return {Function} A Function :: * -> val.
+ * @example
+ *
+ *      const t = R.always('Tee');
+ *      t(); //=> 'Tee'
+ */
+
+var always =
+/*#__PURE__*/
+_curry1(function always(val) {
+  return function () {
+    return val;
+  };
+});
+
 function _cloneRegExp(pattern) {
   return new RegExp(pattern.source, (pattern.global ? 'g' : '') + (pattern.ignoreCase ? 'i' : '') + (pattern.multiline ? 'm' : '') + (pattern.sticky ? 'y' : '') + (pattern.unicode ? 'u' : ''));
 }
@@ -7085,6 +7113,39 @@ _curry2(function defaultTo(d, v) {
   return v == null || v !== v ? d : v;
 });
 
+/**
+ * Returns the empty value of its argument's type. Ramda defines the empty
+ * value of Array (`[]`), Object (`{}`), String (`''`), and Arguments. Other
+ * types are supported if they define `<Type>.empty`,
+ * `<Type>.prototype.empty` or implement the
+ * [FantasyLand Monoid spec](https://github.com/fantasyland/fantasy-land#monoid).
+ *
+ * Dispatches to the `empty` method of the first argument, if present.
+ *
+ * @func
+ * @memberOf R
+ * @since v0.3.0
+ * @category Function
+ * @sig a -> a
+ * @param {*} x
+ * @return {*}
+ * @example
+ *
+ *      R.empty(Just(42));      //=> Nothing()
+ *      R.empty([1, 2, 3]);     //=> []
+ *      R.empty('unicorns');    //=> ''
+ *      R.empty({x: 1, y: 2});  //=> {}
+ */
+
+var empty =
+/*#__PURE__*/
+_curry1(function empty(x) {
+  return x != null && typeof x['fantasy-land/empty'] === 'function' ? x['fantasy-land/empty']() : x != null && x.constructor != null && typeof x.constructor['fantasy-land/empty'] === 'function' ? x.constructor['fantasy-land/empty']() : x != null && typeof x.empty === 'function' ? x.empty() : x != null && x.constructor != null && typeof x.constructor.empty === 'function' ? x.constructor.empty() : _isArray(x) ? [] : _isString(x) ? '' : _isObject(x) ? {} : _isArguments(x) ? function () {
+    return arguments;
+  }() : void 0 // else
+  ;
+});
+
 var XFind =
 /*#__PURE__*/
 function () {
@@ -7164,6 +7225,34 @@ _dispatchable(['find'], _xfind, function find(fn, list) {
   }
 }));
 
+/**
+ * Returns `true` if the given value is its type's empty value; `false`
+ * otherwise.
+ *
+ * @func
+ * @memberOf R
+ * @since v0.1.0
+ * @category Logic
+ * @sig a -> Boolean
+ * @param {*} x
+ * @return {Boolean}
+ * @see R.empty
+ * @example
+ *
+ *      R.isEmpty([1, 2, 3]);   //=> false
+ *      R.isEmpty([]);          //=> true
+ *      R.isEmpty('');          //=> true
+ *      R.isEmpty(null);        //=> false
+ *      R.isEmpty({});          //=> true
+ *      R.isEmpty({length: 0}); //=> false
+ */
+
+var isEmpty =
+/*#__PURE__*/
+_curry1(function isEmpty(x) {
+  return x != null && equals(x, empty(x));
+});
+
 function _isRegExp(x) {
   return Object.prototype.toString.call(x) === '[object RegExp]';
 }
@@ -7196,6 +7285,41 @@ _curry2(function test(pattern, str) {
   return _cloneRegExp(pattern).test(str);
 });
 
+/**
+ * Tests the final argument by passing it to the given predicate function. If
+ * the predicate is satisfied, the function will return the result of calling
+ * the `whenTrueFn` function with the same argument. If the predicate is not
+ * satisfied, the argument is returned as is.
+ *
+ * @func
+ * @memberOf R
+ * @since v0.18.0
+ * @category Logic
+ * @sig (a -> Boolean) -> (a -> a) -> a -> a
+ * @param {Function} pred       A predicate function
+ * @param {Function} whenTrueFn A function to invoke when the `condition`
+ *                              evaluates to a truthy value.
+ * @param {*}        x          An object to test with the `pred` function and
+ *                              pass to `whenTrueFn` if necessary.
+ * @return {*} Either `x` or the result of applying `x` to `whenTrueFn`.
+ * @see R.ifElse, R.unless, R.cond
+ * @example
+ *
+ *      // truncate :: String -> String
+ *      const truncate = R.when(
+ *        R.propSatisfies(R.gt(R.__, 10), 'length'),
+ *        R.pipe(R.take(10), R.append('…'), R.join(''))
+ *      );
+ *      truncate('12345');         //=> '12345'
+ *      truncate('0123456789ABC'); //=> '0123456789…'
+ */
+
+var when =
+/*#__PURE__*/
+_curry3(function when(pred, whenTrueFn, x) {
+  return pred(x) ? whenTrueFn(x) : x;
+});
+
 var Inputs;
 (function (Inputs) {
     Inputs["Name"] = "name";
@@ -7208,15 +7332,16 @@ var Inputs;
     Inputs["Branch"] = "branch";
     Inputs["PR"] = "pr";
 })(Inputs || (Inputs = {}));
+const setDefaults = (defaultVal) => when(isEmpty, always(defaultVal));
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const name = core.getInput(Inputs.Name, { required: true });
             const workflow = core.getInput(Inputs.Workflow, { required: true });
             const githubToken = core.getInput(Inputs.GithubToken, { required: true });
-            const repo = defaultTo(github.context.repo.repo)(core.getInput(Inputs.Repo, { required: false }));
-            const owner = defaultTo(github.context.repo.owner)(core.getInput(Inputs.Owner, { required: false }));
-            const branch = defaultTo('master')(core.getInput(Inputs.Branch, { required: false }));
+            const repo = setDefaults(github.context.repo.repo)(core.getInput(Inputs.Repo, { required: false }));
+            const owner = setDefaults(github.context.repo.owner)(core.getInput(Inputs.Owner, { required: false }));
+            const branch = setDefaults('master')(core.getInput(Inputs.Branch, { required: false }));
             let path = core.getInput(Inputs.Path, { required: false });
             if (path.indexOf('~') === 0) {
                 path = path.replace('~', os.homedir());

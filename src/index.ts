@@ -17,18 +17,29 @@ enum Inputs {
   PR = 'pr',
 }
 
+const setDefaults = (defaultVal: string) => R.when(
+  R.isEmpty,
+  R.always(defaultVal),
+);
+
 async function run(): Promise<void> {
   try {
     const name = core.getInput(Inputs.Name, { required: true });
     const workflow = core.getInput(Inputs.Workflow, { required: true });
     const githubToken = core.getInput(Inputs.GithubToken, { required: true });
-    const repo = R.defaultTo(github.context.repo.repo)(
+    const repo = setDefaults(
+      github.context.repo.repo
+    )(
       core.getInput(Inputs.Repo, { required: false })
     );
-    const owner = R.defaultTo(github.context.repo.owner)(
+    const owner = setDefaults(
+      github.context.repo.owner
+    )(
       core.getInput(Inputs.Owner, { required: false })
     );
-    const branch = R.defaultTo('master')(
+    const branch = setDefaults(
+      'master'
+    )(
       core.getInput(Inputs.Branch, { required: false })
     );
     let path = core.getInput(Inputs.Path, { required: false });
