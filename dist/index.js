@@ -7221,6 +7221,7 @@ function run() {
             if (path.indexOf('~') === 0) {
                 path = path.replace('~', os.homedir());
             }
+            console.log(JSON.stringify(github.context, null, ' '));
             console.log(repo);
             console.log(owner);
             console.log(branch);
