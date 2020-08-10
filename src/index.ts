@@ -37,7 +37,7 @@ async function run(): Promise<void> {
       path = path.replace('~', homedir());
     }
 
-    console.log(JSON.stringify(github.context, null, ' '))
+    console.log(JSON.stringify(github.context.repo, null, ' '))
     console.log(repo)
     console.log(owner)
     console.log(branch)
