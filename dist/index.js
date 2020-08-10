@@ -7221,11 +7221,17 @@ function run() {
             if (path.indexOf('~') === 0) {
                 path = path.replace('~', os.homedir());
             }
+            console.log(repo);
+            console.log(owner);
+            console.log(branch);
+            console.log(path);
             const octokit = github.getOctokit(githubToken);
+            console.log('octokit');
             const workflowList = yield octokit.actions.listRepoWorkflows({
                 owner,
                 repo,
             });
+            console.log('workflowList');
             const currWorkflow = find$1(compose(test(new RegExp(workflow)), prop('path')))(workflowList.data.workflows);
             core.info(JSON.stringify(currWorkflow, null, ' '));
             const workflowRuns = yield octokit.actions.listWorkflowRuns({

@@ -37,12 +37,21 @@ async function run(): Promise<void> {
       path = path.replace('~', homedir());
     }
 
+    console.log(repo)
+    console.log(owner)
+    console.log(branch)
+    console.log(path)
+
     const octokit = github.getOctokit(githubToken);
+
+    console.log('octokit')
 
     const workflowList = await octokit.actions.listRepoWorkflows({
       owner,
       repo,
     });
+
+    console.log('workflowList')
 
     type WorkflowItem = OctokitTypes.ActionsListRepoWorkflowsResponseData['workflows'][0];
 
