@@ -3,7 +3,7 @@ import { resolve } from 'path';
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 import * as R from 'ramda';
-import * as admZip from 'adm-zip';
+import admZip from 'adm-zip';
 
 enum Inputs {
   Name = 'name',

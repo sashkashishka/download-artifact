@@ -10225,11 +10225,6 @@ var admZip = function (/**String*/input) {
 	}
 };
 
-var admZip$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.assign(/*#__PURE__*/Object.create(null), admZip, {
-    'default': admZip,
-    __moduleExports: admZip
-}));
-
 var Inputs;
 (function (Inputs) {
     Inputs["Name"] = "name";
@@ -10265,7 +10260,7 @@ const getActionInputs = () => {
 const pathLens = lens(prop('path'), assoc('path'));
 const transformPath = when(compose(test(/^~/), view(pathLens)), over(pathLens, path => path.replace('~', os.homedir())));
 const unzip = (archive, path) => {
-    const zip = new admZip$1(Buffer.from(archive));
+    const zip = new admZip(Buffer.from(archive));
     zip.getEntries().forEach((entry) => {
         console.log('Extract: ', path$1.resolve(path, entry.entryName));
     });

@@ -61,12 +61,7 @@ async function run(): Promise<void> {
     let run: WorkflowRun | void;
     let page = 1;
 
-    core.info(
-      `###: Look for workflow runs that satisfy search params:
-        ${branch ? `- branch: ${branch}` : ''}
-        ${commit ? `- commit: ${commit}` : ''}
-      `
-    );
+    core.info(`###: Look for workflow runs that satisfy search params:`);
 
     while (!run) {
       const workflowRuns = await octokit.actions.listWorkflowRuns({
