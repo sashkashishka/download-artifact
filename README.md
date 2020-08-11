@@ -1,6 +1,6 @@
-# Download artifacts outside action
+# Download artifacts action
 
-This action can download and extract artifacts as from current repo (as [default action]() do) and
+This action can download and extract artifacts as from current repo (as [default action](https://github.com/actions/download-artifact) do) and
 from other repository. 
 
 Inputs list:
@@ -19,7 +19,7 @@ Inputs list:
 Note: if brach and commit specified simultaneously - branch have precedence over commit.
 
 ```yml
-- use: sashkashishka/download-artifact-outside@v1
+- use: sashkashishka/download-artifact@v1
   with:
     # required
     github_token: ${{ secrets.GITHUB_TOKEN }}
