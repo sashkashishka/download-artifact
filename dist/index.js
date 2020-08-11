@@ -4,8 +4,9 @@ function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'defau
 
 var os = require('os');
 var os__default = _interopDefault(os);
-var path$1 = _interopDefault(require('path'));
-var fs = _interopDefault(require('fs'));
+var path$1 = require('path');
+var path$1__default = _interopDefault(path$1);
+var fs$3 = _interopDefault(require('fs'));
 var Url = _interopDefault(require('url'));
 var http = _interopDefault(require('http'));
 var https = _interopDefault(require('https'));
@@ -13,9 +14,10 @@ require('net');
 var tls = _interopDefault(require('tls'));
 var events = _interopDefault(require('events'));
 require('assert');
-var util = _interopDefault(require('util'));
+var util$1 = _interopDefault(require('util'));
 var Stream = _interopDefault(require('stream'));
 var zlib = _interopDefault(require('zlib'));
+var originalFs$1 = _interopDefault(require('original-fs'));
 
 /*! *****************************************************************************
 Copyright (c) Microsoft Corporation.
@@ -172,7 +174,7 @@ var __importStar = (commonjsGlobal && commonjsGlobal.__importStar) || function (
 Object.defineProperty(exports, "__esModule", { value: true });
 
 const os = __importStar(os__default);
-const path = __importStar(path$1);
+const path = __importStar(path$1__default);
 /**
  * The code to exit an action
  */
@@ -388,8 +390,8 @@ class Context {
     constructor() {
         this.payload = {};
         if (process.env.GITHUB_EVENT_PATH) {
-            if (fs.existsSync(process.env.GITHUB_EVENT_PATH)) {
-                this.payload = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, { encoding: 'utf8' }));
+            if (fs$3.existsSync(process.env.GITHUB_EVENT_PATH)) {
+                this.payload = JSON.parse(fs$3.readFileSync(process.env.GITHUB_EVENT_PATH, { encoding: 'utf8' }));
             }
             else {
                 const path = process.env.GITHUB_EVENT_PATH;
@@ -547,7 +549,7 @@ function TunnelingAgent(options) {
     self.removeSocket(socket);
   });
 }
-util.inherits(TunnelingAgent, events.EventEmitter);
+util$1.inherits(TunnelingAgent, events.EventEmitter);
 
 TunnelingAgent.prototype.addRequest = function addRequest(req, host, port, localAddress) {
   var self = this;
@@ -5537,10 +5539,24 @@ exports.getOctokit = getOctokit;
 
 });
 
-var github$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.assign(/*#__PURE__*/Object.create(null), github, {
-    'default': github,
-    __moduleExports: github
-}));
+/**
+ * A function that always returns `true`. Any passed in parameters are ignored.
+ *
+ * @func
+ * @memberOf R
+ * @since v0.9.0
+ * @category Function
+ * @sig * -> Boolean
+ * @param {*}
+ * @return {Boolean}
+ * @see R.F
+ * @example
+ *
+ *      R.T(); //=> true
+ */
+var T = function () {
+  return true;
+};
 
 function _isPlaceholder(a) {
   return a != null && typeof a === 'object' && a['@@functional/placeholder'] === true;
@@ -5593,6 +5609,41 @@ function _curry2(fn) {
         }) : fn(a, b);
     }
   };
+}
+
+/**
+ * Private `concat` function to merge two array-like objects.
+ *
+ * @private
+ * @param {Array|Arguments} [set1=[]] An array-like object.
+ * @param {Array|Arguments} [set2=[]] An array-like object.
+ * @return {Array} A new, merged array.
+ * @example
+ *
+ *      _concat([4, 5, 6], [1, 2, 3]); //=> [4, 5, 6, 1, 2, 3]
+ */
+function _concat(set1, set2) {
+  set1 = set1 || [];
+  set2 = set2 || [];
+  var idx;
+  var len1 = set1.length;
+  var len2 = set2.length;
+  var result = [];
+  idx = 0;
+
+  while (idx < len1) {
+    result[result.length] = set1[idx];
+    idx += 1;
+  }
+
+  idx = 0;
+
+  while (idx < len2) {
+    result[result.length] = set2[idx];
+    idx += 1;
+  }
+
+  return result;
 }
 
 function _arity(n, fn) {
@@ -5657,6 +5708,100 @@ function _arity(n, fn) {
       throw new Error('First argument to _arity must be a non-negative integer no greater than ten');
   }
 }
+
+/**
+ * Internal curryN function.
+ *
+ * @private
+ * @category Function
+ * @param {Number} length The arity of the curried function.
+ * @param {Array} received An array of arguments received thus far.
+ * @param {Function} fn The function to curry.
+ * @return {Function} The curried function.
+ */
+
+function _curryN(length, received, fn) {
+  return function () {
+    var combined = [];
+    var argsIdx = 0;
+    var left = length;
+    var combinedIdx = 0;
+
+    while (combinedIdx < received.length || argsIdx < arguments.length) {
+      var result;
+
+      if (combinedIdx < received.length && (!_isPlaceholder(received[combinedIdx]) || argsIdx >= arguments.length)) {
+        result = received[combinedIdx];
+      } else {
+        result = arguments[argsIdx];
+        argsIdx += 1;
+      }
+
+      combined[combinedIdx] = result;
+
+      if (!_isPlaceholder(result)) {
+        left -= 1;
+      }
+
+      combinedIdx += 1;
+    }
+
+    return left <= 0 ? fn.apply(this, combined) : _arity(left, _curryN(length, combined, fn));
+  };
+}
+
+/**
+ * Returns a curried equivalent of the provided function, with the specified
+ * arity. The curried function has two unusual capabilities. First, its
+ * arguments needn't be provided one at a time. If `g` is `R.curryN(3, f)`, the
+ * following are equivalent:
+ *
+ *   - `g(1)(2)(3)`
+ *   - `g(1)(2, 3)`
+ *   - `g(1, 2)(3)`
+ *   - `g(1, 2, 3)`
+ *
+ * Secondly, the special placeholder value [`R.__`](#__) may be used to specify
+ * "gaps", allowing partial application of any combination of arguments,
+ * regardless of their positions. If `g` is as above and `_` is [`R.__`](#__),
+ * the following are equivalent:
+ *
+ *   - `g(1, 2, 3)`
+ *   - `g(_, 2, 3)(1)`
+ *   - `g(_, _, 3)(1)(2)`
+ *   - `g(_, _, 3)(1, 2)`
+ *   - `g(_, 2)(1)(3)`
+ *   - `g(_, 2)(1, 3)`
+ *   - `g(_, 2)(_, 3)(1)`
+ *
+ * @func
+ * @memberOf R
+ * @since v0.5.0
+ * @category Function
+ * @sig Number -> (* -> a) -> (* -> a)
+ * @param {Number} length The arity for the returned function.
+ * @param {Function} fn The function to curry.
+ * @return {Function} A new, curried function.
+ * @see R.curry
+ * @example
+ *
+ *      const sumArgs = (...args) => R.sum(args);
+ *
+ *      const curriedAddFourNumbers = R.curryN(4, sumArgs);
+ *      const f = curriedAddFourNumbers(1, 2);
+ *      const g = f(3);
+ *      g(4); //=> 10
+ */
+
+var curryN =
+/*#__PURE__*/
+_curry2(function curryN(length, fn) {
+  if (length === 1) {
+    return _curry1(fn);
+  }
+
+  return _arity(length, _curryN(length, [], fn));
+});
 
 /**
  * Optimized internal three-arity curry function.
@@ -5785,6 +5930,30 @@ var _xfBase = {
     return this.xf['@@transducer/result'](result);
   }
 };
+
+/**
+ * Returns the larger of its two arguments.
+ *
+ * @func
+ * @memberOf R
+ * @since v0.1.0
+ * @category Relation
+ * @sig Ord a => a -> a -> a
+ * @param {*} a
+ * @param {*} b
+ * @return {*}
+ * @see R.maxBy, R.min
+ * @example
+ *
+ *      R.max(789, 123); //=> 789
+ *      R.max('a', 'b'); //=> 'b'
+ */
+
+var max =
+/*#__PURE__*/
+_curry2(function max(a, b) {
+  return b > a ? b : a;
+});
 
 function _map(fn, functor) {
   var idx = 0;
@@ -5980,6 +6149,30 @@ function _reduce(fn, acc, list) {
   throw new TypeError('reduce: list must be array or iterable');
 }
 
+var XMap =
+/*#__PURE__*/
+function () {
+  function XMap(f, xf) {
+    this.xf = xf;
+    this.f = f;
+  }
+
+  XMap.prototype['@@transducer/init'] = _xfBase.init;
+  XMap.prototype['@@transducer/result'] = _xfBase.result;
+
+  XMap.prototype['@@transducer/step'] = function (result, input) {
+    return this.xf['@@transducer/step'](result, this.f(input));
+  };
+
+  return XMap;
+}();
+
+var _xmap =
+/*#__PURE__*/
+_curry2(function _xmap(f, xf) {
+  return new XMap(f, xf);
+});
+
 function _has(prop, obj) {
   return Object.prototype.hasOwnProperty.call(obj, prop);
 }
@@ -6081,6 +6274,64 @@ _curry1(function keys(obj) {
 
   return ks;
 });
+
+/**
+ * Takes a function and
+ * a [functor](https://github.com/fantasyland/fantasy-land#functor),
+ * applies the function to each of the functor's values, and returns
+ * a functor of the same shape.
+ *
+ * Ramda provides suitable `map` implementations for `Array` and `Object`,
+ * so this function may be applied to `[1, 2, 3]` or `{x: 1, y: 2, z: 3}`.
+ *
+ * Dispatches to the `map` method of the second argument, if present.
+ *
+ * Acts as a transducer if a transformer is given in list position.
+ *
+ * Also treats functions as functors and will compose them together.
+ *
+ * @func
+ * @memberOf R
+ * @since v0.1.0
+ * @category List
+ * @sig Functor f => (a -> b) -> f a -> f b
+ * @param {Function} fn The function to be called on every element of the input `list`.
+ * @param {Array} list The list to be iterated over.
+ * @return {Array} The new list.
+ * @see R.transduce, R.addIndex
+ * @example
+ *
+ *      const double = x => x * 2;
+ *
+ *      R.map(double, [1, 2, 3]); //=> [2, 4, 6]
+ *
+ *      R.map(double, {x: 1, y: 2, z: 3}); //=> {x: 2, y: 4, z: 6}
+ * @symb R.map(f, [a, b]) = [f(a), f(b)]
+ * @symb R.map(f, { x: a, y: b }) = { x: f(a), y: f(b) }
+ * @symb R.map(f, functor_o) = functor_o.map(f)
+ */
+
+var map =
+/*#__PURE__*/
+_curry2(
+/*#__PURE__*/
+_dispatchable(['fantasy-land/map', 'map'], _xmap, function map(fn, functor) {
+  switch (Object.prototype.toString.call(functor)) {
+    case '[object Function]':
+      return curryN(functor.length, function () {
+        return fn.call(this, functor.apply(this, arguments));
+      });
+
+    case '[object Object]':
+      return _reduce(function (acc, key) {
+        acc[key] = fn(functor[key]);
+        return acc;
+      }, {}, keys(functor));
+
+    default:
+      return _map(fn, functor);
+  }
+}));
 
 /**
  * Determine if the passed argument is an integer.
@@ -6303,6 +6554,133 @@ _curry1(function always(val) {
   };
 });
 
+/**
+ * ap applies a list of functions to a list of values.
+ *
+ * Dispatches to the `ap` method of the second argument, if present. Also
+ * treats curried functions as applicatives.
+ *
+ * @func
+ * @memberOf R
+ * @since v0.3.0
+ * @category Function
+ * @sig [a -> b] -> [a] -> [b]
+ * @sig Apply f => f (a -> b) -> f a -> f b
+ * @sig (r -> a -> b) -> (r -> a) -> (r -> b)
+ * @param {*} applyF
+ * @param {*} applyX
+ * @return {*}
+ * @example
+ *
+ *      R.ap([R.multiply(2), R.add(3)], [1,2,3]); //=> [2, 4, 6, 4, 5, 6]
+ *      R.ap([R.concat('tasty '), R.toUpper], ['pizza', 'salad']); //=> ["tasty pizza", "tasty salad", "PIZZA", "SALAD"]
+ *
+ *      // R.ap can also be used as S combinator
+ *      // when only two functions are passed
+ *      R.ap(R.concat, R.toUpper)('Ramda') //=> 'RamdaRAMDA'
+ * @symb R.ap([f, g], [a, b]) = [f(a), f(b), g(a), g(b)]
+ */
+
+var ap =
+/*#__PURE__*/
+_curry2(function ap(applyF, applyX) {
+  return typeof applyX['fantasy-land/ap'] === 'function' ? applyX['fantasy-land/ap'](applyF) : typeof applyF.ap === 'function' ? applyF.ap(applyX) : typeof applyF === 'function' ? function (x) {
+    return applyF(x)(applyX(x));
+  } : _reduce(function (acc, f) {
+    return _concat(acc, map(f, applyX));
+  }, [], applyF);
+});
+
+/**
+ * Makes a shallow clone of an object, setting or overriding the specified
+ * property with the given value. Note that this copies and flattens prototype
+ * properties onto the new object as well. All non-primitive properties are
+ * copied by reference.
+ *
+ * @func
+ * @memberOf R
+ * @since v0.8.0
+ * @category Object
+ * @sig String -> a -> {k: v} -> {k: v}
+ * @param {String} prop The property name to set
+ * @param {*} val The new value
+ * @param {Object} obj The object to clone
+ * @return {Object} A new object equivalent to the original except for the changed property.
+ * @see R.dissoc, R.pick
+ * @example
+ *
+ *      R.assoc('c', 3, {a: 1, b: 2}); //=> {a: 1, b: 2, c: 3}
+ */
+
+var assoc =
+/*#__PURE__*/
+_curry3(function assoc(prop, val, obj) {
+  var result = {};
+
+  for (var p in obj) {
+    result[p] = obj[p];
+  }
+
+  result[prop] = val;
+  return result;
+});
+
+/**
+ * "lifts" a function to be the specified arity, so that it may "map over" that
+ * many lists, Functions or other objects that satisfy the [FantasyLand Apply spec](https://github.com/fantasyland/fantasy-land#apply).
+ *
+ * @func
+ * @memberOf R
+ * @since v0.7.0
+ * @category Function
+ * @sig Number -> (*... -> *) -> ([*]... -> [*])
+ * @param {Function} fn The function to lift into higher context
+ * @return {Function} The lifted function.
+ * @see R.lift, R.ap
+ * @example
+ *
+ *      const madd3 = R.liftN(3, (...args) => R.sum(args));
+ *      madd3([1,2,3], [1,2,3], [1]); //=> [3, 4, 5, 4, 5, 6, 5, 6, 7]
+ */
+
+var liftN =
+/*#__PURE__*/
+_curry2(function liftN(arity, fn) {
+  var lifted = curryN(arity, fn);
+  return curryN(arity, function () {
+    return _reduce(ap, map(lifted, arguments[0]), Array.prototype.slice.call(arguments, 1));
+  });
+});
+
+/**
+ * "lifts" a function of arity > 1 so that it may "map over" a list, Function or other
+ * object that satisfies the [FantasyLand Apply spec](https://github.com/fantasyland/fantasy-land#apply).
+ *
+ * @func
+ * @memberOf R
+ * @since v0.7.0
+ * @category Function
+ * @sig (*... -> *) -> ([*]... -> [*])
+ * @param {Function} fn The function to lift into higher context
+ * @return {Function} The lifted function.
+ * @see R.liftN
+ * @example
+ *
+ *      const madd3 = R.lift((a, b, c) => a + b + c);
+ *
+ *      madd3([1,2,3], [1,2,3], [1]); //=> [3, 4, 5, 4, 5, 6, 5, 6, 7]
+ *
+ *      const madd5 = R.lift((a, b, c, d, e) => a + b + c + d + e);
+ *
+ *      madd5([1,2], [3], [4, 5], [6], [7, 8]); //=> [21, 22, 22, 23, 22, 23, 23, 24]
+ */
+
+var lift =
+/*#__PURE__*/
+_curry1(function lift(fn) {
+  return liftN(fn.length, fn);
+});
+
 function _cloneRegExp(pattern) {
   return new RegExp(pattern.source, (pattern.global ? 'g' : '') + (pattern.ignoreCase ? 'i' : '') + (pattern.multiline ? 'm' : '') + (pattern.sticky ? 'y' : '') + (pattern.unicode ? 'u' : ''));
 }
@@ -6338,6 +6716,59 @@ var type =
 _curry1(function type(val) {
   return val === null ? 'Null' : val === undefined ? 'Undefined' : Object.prototype.toString.call(val).slice(8, -1);
 });
+
+/**
+ * A function that returns the `!` of its argument. It will return `true` when
+ * passed false-y value, and `false` when passed a truth-y one.
+ *
+ * @func
+ * @memberOf R
+ * @since v0.1.0
+ * @category Logic
+ * @sig * -> Boolean
+ * @param {*} a any value
+ * @return {Boolean} the logical inverse of passed argument.
+ * @see R.complement
+ * @example
+ *
+ *      R.not(true); //=> false
+ *      R.not(false); //=> true
+ *      R.not(0); //=> true
+ *      R.not(1); //=> false
+ */
+
+var not =
+/*#__PURE__*/
+_curry1(function not(a) {
+  return !a;
+});
+
+/**
+ * Takes a function `f` and returns a function `g` such that if called with the same arguments
+ * when `f` returns a "truthy" value, `g` returns `false` and when `f` returns a "falsy" value `g` returns `true`.
+ *
+ * `R.complement` may be applied to any functor
+ *
+ * @func
+ * @memberOf R
+ * @since v0.12.0
+ * @category Logic
+ * @sig (*... -> *) -> (*... -> Boolean)
+ * @param {Function} f
+ * @return {Function}
+ * @see R.not
+ * @example
+ *
+ *      const isNotNil = R.complement(R.isNil);
+ *      isNil(null); //=> true
+ *      isNotNil(null); //=> false
+ *      isNil(7); //=> false
+ *      isNotNil(7); //=> true
+ */
+
+var complement =
+/*#__PURE__*/
+lift(not);
 
 function _pipe(f, g) {
   return function () {
@@ -7084,33 +7515,50 @@ _curry1(function toString(val) {
 });
 
 /**
- * Returns the second argument if it is not `null`, `undefined` or `NaN`;
- * otherwise the first argument is returned.
+ * Returns a function, `fn`, which encapsulates `if/else, if/else, ...` logic.
+ * `R.cond` takes a list of [predicate, transformer] pairs. All of the arguments
+ * to `fn` are applied to each of the predicates in turn until one returns a
+ * "truthy" value, at which point `fn` returns the result of applying its
+ * arguments to the corresponding transformer. If none of the predicates
+ * matches, `fn` returns undefined.
  *
  * @func
  * @memberOf R
- * @since v0.10.0
+ * @since v0.6.0
  * @category Logic
- * @sig a -> b -> a | b
- * @param {a} default The default value.
- * @param {b} val `val` will be returned instead of `default` unless `val` is `null`, `undefined` or `NaN`.
- * @return {*} The second value if it is not `null`, `undefined` or `NaN`, otherwise the default value
+ * @sig [[(*... -> Boolean),(*... -> *)]] -> (*... -> *)
+ * @param {Array} pairs A list of [predicate, transformer]
+ * @return {Function}
+ * @see R.ifElse, R.unless, R.when
  * @example
  *
- *      const defaultTo42 = R.defaultTo(42);
- *
- *      defaultTo42(null);  //=> 42
- *      defaultTo42(undefined);  //=> 42
- *      defaultTo42(false);  //=> false
- *      defaultTo42('Ramda');  //=> 'Ramda'
- *      // parseInt('string') results in NaN
- *      defaultTo42(parseInt('string')); //=> 42
+ *      const fn = R.cond([
+ *        [R.equals(0),   R.always('water freezes at 0°C')],
+ *        [R.equals(100), R.always('water boils at 100°C')],
+ *        [R.T,           temp => 'nothing special happens at ' + temp + '°C']
+ *      ]);
+ *      fn(0); //=> 'water freezes at 0°C'
+ *      fn(50); //=> 'nothing special happens at 50°C'
+ *      fn(100); //=> 'water boils at 100°C'
  */
 
-var defaultTo =
+var cond =
 /*#__PURE__*/
-_curry2(function defaultTo(d, v) {
-  return v == null || v !== v ? d : v;
+_curry1(function cond(pairs) {
+  var arity = reduce(max, 0, map(function (pair) {
+    return pair[0].length;
+  }, pairs));
+  return _arity(arity, function () {
+    var idx = 0;
+
+    while (idx < pairs.length) {
+      if (pairs[idx][0].apply(this, arguments)) {
+        return pairs[idx][1].apply(this, arguments);
+      }
+
+      idx += 1;
+    }
+  });
 });
 
 /**
@@ -7253,6 +7701,160 @@ _curry1(function isEmpty(x) {
   return x != null && equals(x, empty(x));
 });
 
+/**
+ * Returns a lens for the given getter and setter functions. The getter "gets"
+ * the value of the focus; the setter "sets" the value of the focus. The setter
+ * should not mutate the data structure.
+ *
+ * @func
+ * @memberOf R
+ * @since v0.8.0
+ * @category Object
+ * @typedefn Lens s a = Functor f => (a -> f a) -> s -> f s
+ * @sig (s -> a) -> ((a, s) -> s) -> Lens s a
+ * @param {Function} getter
+ * @param {Function} setter
+ * @return {Lens}
+ * @see R.view, R.set, R.over, R.lensIndex, R.lensProp
+ * @example
+ *
+ *      const xLens = R.lens(R.prop('x'), R.assoc('x'));
+ *
+ *      R.view(xLens, {x: 1, y: 2});            //=> 1
+ *      R.set(xLens, 4, {x: 1, y: 2});          //=> {x: 4, y: 2}
+ *      R.over(xLens, R.negate, {x: 1, y: 2});  //=> {x: -1, y: 2}
+ */
+
+var lens =
+/*#__PURE__*/
+_curry2(function lens(getter, setter) {
+  return function (toFunctorFn) {
+    return function (target) {
+      return map(function (focus) {
+        return setter(focus, target);
+      }, toFunctorFn(getter(target)));
+    };
+  };
+});
+
+// transforms the held value with the provided function.
+
+var Identity = function (x) {
+  return {
+    value: x,
+    map: function (f) {
+      return Identity(f(x));
+    }
+  };
+};
+/**
+ * Returns the result of "setting" the portion of the given data structure
+ * focused by the given lens to the result of applying the given function to
+ * the focused value.
+ *
+ * @func
+ * @memberOf R
+ * @since v0.16.0
+ * @category Object
+ * @typedefn Lens s a = Functor f => (a -> f a) -> s -> f s
+ * @sig Lens s a -> (a -> a) -> s -> s
+ * @param {Lens} lens
+ * @param {*} v
+ * @param {*} x
+ * @return {*}
+ * @see R.prop, R.lensIndex, R.lensProp
+ * @example
+ *
+ *      const headLens = R.lensIndex(0);
+ *
+ *      R.over(headLens, R.toUpper, ['foo', 'bar', 'baz']); //=> ['FOO', 'bar', 'baz']
+ */
+
+
+var over =
+/*#__PURE__*/
+_curry3(function over(lens, f, x) {
+  // The value returned by the getter function is first transformed with `f`,
+  // then set as the value of an `Identity`. This is then mapped over with the
+  // setter function of the lens.
+  return lens(function (y) {
+    return Identity(f(y));
+  })(x).value;
+});
+
+function _createPartialApplicator(concat) {
+  return _curry2(function (fn, args) {
+    return _arity(Math.max(0, fn.length - args.length), function () {
+      return fn.apply(this, concat(args, arguments));
+    });
+  });
+}
+
+/**
+ * Takes a function `f` and a list of arguments, and returns a function `g`.
+ * When applied, `g` returns the result of applying `f` to the arguments
+ * provided initially followed by the arguments provided to `g`.
+ *
+ * @func
+ * @memberOf R
+ * @since v0.10.0
+ * @category Function
+ * @sig ((a, b, c, ..., n) -> x) -> [a, b, c, ...] -> ((d, e, f, ..., n) -> x)
+ * @param {Function} f
+ * @param {Array} args
+ * @return {Function}
+ * @see R.partialRight, R.curry
+ * @example
+ *
+ *      const multiply2 = (a, b) => a * b;
+ *      const double = R.partial(multiply2, [2]);
+ *      double(2); //=> 4
+ *
+ *      const greet = (salutation, title, firstName, lastName) =>
+ *        salutation + ', ' + title + ' ' + firstName + ' ' + lastName + '!';
+ *
+ *      const sayHello = R.partial(greet, ['Hello']);
+ *      const sayHelloToMs = R.partial(sayHello, ['Ms.']);
+ *      sayHelloToMs('Jane', 'Jones'); //=> 'Hello, Ms. Jane Jones!'
+ * @symb R.partial(f, [a, b])(c, d) = f(a, b, c, d)
+ */
+
+var partial =
+/*#__PURE__*/
+_createPartialApplicator(_concat);
+
+/**
+ * Returns `true` if the specified object property is equal, in
+ * [`R.equals`](#equals) terms, to the given value; `false` otherwise.
+ * You can test multiple properties with [`R.whereEq`](#whereEq).
+ *
+ * @func
+ * @memberOf R
+ * @since v0.1.0
+ * @category Relation
+ * @sig String -> a -> Object -> Boolean
+ * @param {String} name
+ * @param {*} val
+ * @param {*} obj
+ * @return {Boolean}
+ * @see R.whereEq, R.propSatisfies, R.equals
+ * @example
+ *
+ *      const abby = {name: 'Abby', age: 7, hair: 'blond'};
+ *      const fred = {name: 'Fred', age: 12, hair: 'brown'};
+ *      const rusty = {name: 'Rusty', age: 10, hair: 'brown'};
+ *      const alois = {name: 'Alois', age: 15, disposition: 'surly'};
+ *      const kids = [abby, fred, rusty, alois];
+ *      const hasBrownHair = R.propEq('hair', 'brown');
+ *      R.filter(hasBrownHair, kids); //=> [fred, rusty]
+ */
+
+var propEq =
+/*#__PURE__*/
+_curry3(function propEq(name, val, obj) {
+  return equals(val, obj[name]);
+});
+
 function _isRegExp(x) {
   return Object.prototype.toString.call(x) === '[object RegExp]';
 }
@@ -7283,6 +7885,45 @@ _curry2(function test(pattern, str) {
   }
 
   return _cloneRegExp(pattern).test(str);
+});
+
+var Const = function (x) {
+  return {
+    value: x,
+    'fantasy-land/map': function () {
+      return this;
+    }
+  };
+};
+/**
+ * Returns a "view" of the given data structure, determined by the given lens.
+ * The lens's focus determines which portion of the data structure is visible.
+ *
+ * @func
+ * @memberOf R
+ * @since v0.16.0
+ * @category Object
+ * @typedefn Lens s a = Functor f => (a -> f a) -> s -> f s
+ * @sig Lens s a -> s -> a
+ * @param {Lens} lens
+ * @param {*} x
+ * @return {*}
+ * @see R.prop, R.lensIndex, R.lensProp
+ * @example
+ *
+ *      const xLens = R.lensProp('x');
+ *
+ *      R.view(xLens, {x: 1, y: 2});  //=> 1
+ *      R.view(xLens, {x: 4, y: 2});  //=> 4
+ */
+
+
+var view =
+/*#__PURE__*/
+_curry2(function view(lens, x) {
+  // Using `Const` effectively ignores the setter function of the `lens`,
+  // leaving the value returned by the getter function unmodified.
+  return lens(Const)(x).value;
 });
 
 /**
@@ -7320,6 +7961,2274 @@ _curry3(function when(pred, whenTrueFn, x) {
   return pred(x) ? whenTrueFn(x) : x;
 });
 
+var require$1 = function() {
+  var fs = fs$3;
+  if (process.versions['electron']) {
+	  try {
+	    originalFs = originalFs$1;
+	    if (Object.keys(originalFs).length > 0) {
+	      fs = originalFs;
+      }
+	  } catch (e) {}
+  }
+  return fs
+};
+
+var fileSystem = {
+	require: require$1
+};
+
+var constants = {
+    /* The local file header */
+    LOCHDR           : 30, // LOC header size
+    LOCSIG           : 0x04034b50, // "PK\003\004"
+    LOCVER           : 4,	// version needed to extract
+    LOCFLG           : 6, // general purpose bit flag
+    LOCHOW           : 8, // compression method
+    LOCTIM           : 10, // modification time (2 bytes time, 2 bytes date)
+    LOCCRC           : 14, // uncompressed file crc-32 value
+    LOCSIZ           : 18, // compressed size
+    LOCLEN           : 22, // uncompressed size
+    LOCNAM           : 26, // filename length
+    LOCEXT           : 28, // extra field length
+
+    /* The Data descriptor */
+    EXTSIG           : 0x08074b50, // "PK\007\008"
+    EXTHDR           : 16, // EXT header size
+    EXTCRC           : 4, // uncompressed file crc-32 value
+    EXTSIZ           : 8, // compressed size
+    EXTLEN           : 12, // uncompressed size
+
+    /* The central directory file header */
+    CENHDR           : 46, // CEN header size
+    CENSIG           : 0x02014b50, // "PK\001\002"
+    CENVEM           : 4, // version made by
+    CENVER           : 6, // version needed to extract
+    CENFLG           : 8, // encrypt, decrypt flags
+    CENHOW           : 10, // compression method
+    CENTIM           : 12, // modification time (2 bytes time, 2 bytes date)
+    CENCRC           : 16, // uncompressed file crc-32 value
+    CENSIZ           : 20, // compressed size
+    CENLEN           : 24, // uncompressed size
+    CENNAM           : 28, // filename length
+    CENEXT           : 30, // extra field length
+    CENCOM           : 32, // file comment length
+    CENDSK           : 34, // volume number start
+    CENATT           : 36, // internal file attributes
+    CENATX           : 38, // external file attributes (host system dependent)
+    CENOFF           : 42, // LOC header offset
+
+    /* The entries in the end of central directory */
+    ENDHDR           : 22, // END header size
+    ENDSIG           : 0x06054b50, // "PK\005\006"
+    ENDSUB           : 8, // number of entries on this disk
+    ENDTOT           : 10, // total number of entries
+    ENDSIZ           : 12, // central directory size in bytes
+    ENDOFF           : 16, // offset of first CEN header
+    ENDCOM           : 20, // zip file comment length
+
+    END64HDR         : 20, // zip64 END header size
+    END64SIG         : 0x07064b50, // zip64 Locator signature, "PK\006\007"
+    END64START       : 4, // number of the disk with the start of the zip64
+    END64OFF         : 8, // relative offset of the zip64 end of central directory
+    END64NUMDISKS    : 16, // total number of disks
+
+    ZIP64SIG         : 0x06064b50, // zip64 signature, "PK\006\006"
+    ZIP64HDR         : 56, // zip64 record minimum size
+    ZIP64LEAD        : 12, // leading bytes at the start of the record, not counted by the value stored in ZIP64SIZE
+    ZIP64SIZE        : 4, // zip64 size of the central directory record
+    ZIP64VEM         : 12, // zip64 version made by
+    ZIP64VER         : 14, // zip64 version needed to extract
+    ZIP64DSK         : 16, // zip64 number of this disk
+    ZIP64DSKDIR      : 20, // number of the disk with the start of the record directory
+    ZIP64SUB         : 24, // number of entries on this disk
+    ZIP64TOT         : 32, // total number of entries
+    ZIP64SIZB        : 40, // zip64 central directory size in bytes
+    ZIP64OFF         : 48, // offset of start of central directory with respect to the starting disk number
+    ZIP64EXTRA       : 56, // extensible data sector
+
+    /* Compression methods */
+    STORED           : 0, // no compression
+    SHRUNK           : 1, // shrunk
+    REDUCED1         : 2, // reduced with compression factor 1
+    REDUCED2         : 3, // reduced with compression factor 2
+    REDUCED3         : 4, // reduced with compression factor 3
+    REDUCED4         : 5, // reduced with compression factor 4
+    IMPLODED         : 6, // imploded
+    // 7 reserved
+    DEFLATED         : 8, // deflated
+    ENHANCED_DEFLATED: 9, // enhanced deflated
+    PKWARE           : 10,// PKWare DCL imploded
+    // 11 reserved
+    BZIP2            : 12, //  compressed using BZIP2
+    // 13 reserved
+    LZMA             : 14, // LZMA
+    // 15-17 reserved
+    IBM_TERSE        : 18, // compressed using IBM TERSE
+    IBM_LZ77         : 19, //IBM LZ77 z
+
+    /* General purpose bit flag */
+    FLG_ENC          : 0,  // encripted file
+    FLG_COMP1        : 1,  // compression option
+    FLG_COMP2        : 2,  // compression option
+    FLG_DESC         : 4,  // data descriptor
+    FLG_ENH          : 8,  // enhanced deflation
+    FLG_STR          : 16, // strong encryption
+    FLG_LNG          : 1024, // language encoding
+    FLG_MSK          : 4096, // mask header values
+
+    /* Load type */
+    FILE             : 0,
+    BUFFER           : 1,
+    NONE             : 2,
+
+    /* 4.5 Extensible data fields */
+    EF_ID            : 0,
+    EF_SIZE          : 2,
+
+    /* Header IDs */
+    ID_ZIP64         : 0x0001,
+    ID_AVINFO        : 0x0007,
+    ID_PFS           : 0x0008,
+    ID_OS2           : 0x0009,
+    ID_NTFS          : 0x000a,
+    ID_OPENVMS       : 0x000c,
+    ID_UNIX          : 0x000d,
+    ID_FORK          : 0x000e,
+    ID_PATCH         : 0x000f,
+    ID_X509_PKCS7    : 0x0014,
+    ID_X509_CERTID_F : 0x0015,
+    ID_X509_CERTID_C : 0x0016,
+    ID_STRONGENC     : 0x0017,
+    ID_RECORD_MGT    : 0x0018,
+    ID_X509_PKCS7_RL : 0x0019,
+    ID_IBM1          : 0x0065,
+    ID_IBM2          : 0x0066,
+    ID_POSZIP        : 0x4690,
+
+    EF_ZIP64_OR_32   : 0xffffffff,
+    EF_ZIP64_OR_16   : 0xffff,
+    EF_ZIP64_SUNCOMP : 0,
+    EF_ZIP64_SCOMP   : 8,
+    EF_ZIP64_RHO     : 16,
+    EF_ZIP64_DSN     : 24
+};
+
+var errors = {
+    /* Header error messages */
+    "INVALID_LOC" : "Invalid LOC header (bad signature)",
+    "INVALID_CEN" : "Invalid CEN header (bad signature)",
+    "INVALID_END" : "Invalid END header (bad signature)",
+
+    /* ZipEntry error messages*/
+    "NO_DATA" : "Nothing to decompress",
+    "BAD_CRC" : "CRC32 checksum failed",
+    "FILE_IN_THE_WAY" : "There is a file in the way: %s",
+    "UNKNOWN_METHOD" : "Invalid/unsupported compression method",
+
+    /* Inflater error messages */
+    "AVAIL_DATA" : "inflate::Available inflate data did not terminate",
+    "INVALID_DISTANCE" : "inflate::Invalid literal/length or distance code in fixed or dynamic block",
+    "TO_MANY_CODES" : "inflate::Dynamic block code description: too many length or distance codes",
+    "INVALID_REPEAT_LEN" : "inflate::Dynamic block code description: repeat more than specified lengths",
+    "INVALID_REPEAT_FIRST" : "inflate::Dynamic block code description: repeat lengths with no first length",
+    "INCOMPLETE_CODES" : "inflate::Dynamic block code description: code lengths codes incomplete",
+    "INVALID_DYN_DISTANCE": "inflate::Dynamic block code description: invalid distance code lengths",
+    "INVALID_CODES_LEN": "inflate::Dynamic block code description: invalid literal/length code lengths",
+    "INVALID_STORE_BLOCK" : "inflate::Stored block length did not match one's complement",
+    "INVALID_BLOCK_TYPE" : "inflate::Invalid block type (type == 3)",
+
+    /* ADM-ZIP error messages */
+    "CANT_EXTRACT_FILE" : "Could not extract the file",
+    "CANT_OVERRIDE" : "Target file already exists",
+    "NO_ZIP" : "No zip file was loaded",
+    "NO_ENTRY" : "Entry doesn't exist",
+    "DIRECTORY_CONTENT_ERROR" : "A directory cannot have content",
+    "FILE_NOT_FOUND" : "File not found: %s",
+    "NOT_IMPLEMENTED" : "Not implemented",
+    "INVALID_FILENAME" : "Invalid filename",
+    "INVALID_FORMAT" : "Invalid or unsupported zip format. No END header found"
+};
+
+var fs = fileSystem.require();
+
+fs.existsSync = fs.existsSync || path$1__default.existsSync;
+
+var utils$2 = (function() {
+
+    var crcTable = [],
+        Constants = constants,
+        Errors = errors,
+
+        PATH_SEPARATOR = path$1__default.sep;
+
+
+    function mkdirSync(/*String*/path) {
+        var resolvedPath = path.split(PATH_SEPARATOR)[0];
+        path.split(PATH_SEPARATOR).forEach(function(name) {
+            if (!name || name.substr(-1,1) === ":") return;
+            resolvedPath += PATH_SEPARATOR + name;
+            var stat;
+            try {
+                stat = fs.statSync(resolvedPath);
+            } catch (e) {
+                fs.mkdirSync(resolvedPath);
+            }
+            if (stat && stat.isFile())
+                throw Errors.FILE_IN_THE_WAY.replace("%s", resolvedPath);
+        });
+    }
+
+    function findSync(/*String*/dir, /*RegExp*/pattern, /*Boolean*/recoursive) {
+        if (typeof pattern === 'boolean') {
+            recoursive = pattern;
+            pattern = undefined;
+        }
+        var files = [];
+        fs.readdirSync(dir).forEach(function(file) {
+            var path = path$1__default.join(dir, file);
+
+            if (fs.statSync(path).isDirectory() && recoursive)
+                files = files.concat(findSync(path, pattern, recoursive));
+
+            if (!pattern || pattern.test(path)) {
+                files.push(path$1__default.normalize(path) + (fs.statSync(path).isDirectory() ? PATH_SEPARATOR : ""));
+            }
+
+        });
+        return files;
+    }
+
+    function readBigUInt64LE(/*Buffer*/buffer, /*int*/index) {
+        var slice = Buffer.from(buffer.slice(index, index + 8));
+        slice.swap64();
+
+        return parseInt(`0x${ slice.toString('hex') }`);
+    }
+
+    return {
+        makeDir : function(/*String*/path) {
+            mkdirSync(path);
+        },
+
+        crc32 : function(buf) {
+            if (typeof buf === 'string') {
+                buf = Buffer.alloc(buf.length, buf);
+            }
+            var b = Buffer.alloc(4);
+            if (!crcTable.length) {
+                for (var n = 0; n < 256; n++) {
+                    var c = n;
+                    for (var k = 8; --k >= 0;)  //
+                        if ((c & 1) !== 0)  { c = 0xedb88320 ^ (c >>> 1); } else { c = c >>> 1; }
+                    if (c < 0) {
+                        b.writeInt32LE(c, 0);
+                        c = b.readUInt32LE(0);
+                    }
+                    crcTable[n] = c;
+                }
+            }
+            var crc = 0, off = 0, len = buf.length, c1 = ~crc;
+            while(--len >= 0) c1 = crcTable[(c1 ^ buf[off++]) & 0xff] ^ (c1 >>> 8);
+            crc = ~c1;
+            b.writeInt32LE(crc & 0xffffffff, 0);
+            return b.readUInt32LE(0);
+        },
+
+        methodToString : function(/*Number*/method) {
+            switch (method) {
+                case Constants.STORED:
+                    return 'STORED (' + method + ')';
+                case Constants.DEFLATED:
+                    return 'DEFLATED (' + method + ')';
+                default:
+                    return 'UNSUPPORTED (' + method + ')';
+            }
+
+        },
+
+        writeFileTo : function(/*String*/path, /*Buffer*/content, /*Boolean*/overwrite, /*Number*/attr) {
+            if (fs.existsSync(path)) {
+                if (!overwrite)
+                    return false; // cannot overwrite
+
+                var stat = fs.statSync(path);
+                if (stat.isDirectory()) {
+                    return false;
+                }
+            }
+            var folder = path$1__default.dirname(path);
+            if (!fs.existsSync(folder)) {
+                mkdirSync(folder);
+            }
+
+            var fd;
+            try {
+                fd = fs.openSync(path, 'w', 438); // 0666
+            } catch(e) {
+                fs.chmodSync(path, 438);
+                fd = fs.openSync(path, 'w', 438);
+            }
+            if (fd) {
+                try {
+                    fs.writeSync(fd, content, 0, content.length, 0);
+                }
+                catch (e){
+                    throw e;
+                }
+                finally {
+                    fs.closeSync(fd);
+                }
+            }
+            fs.chmodSync(path, attr || 438);
+            return true;
+        },
+
+        writeFileToAsync : function(/*String*/path, /*Buffer*/content, /*Boolean*/overwrite, /*Number*/attr, /*Function*/callback) {
+            if(typeof attr === 'function') {
+                callback = attr;
+                attr = undefined;
+            }
+
+            fs.exists(path, function(exists) {
+                if(exists && !overwrite)
+                    return callback(false);
+
+                fs.stat(path, function(err, stat) {
+                    if(exists &&stat.isDirectory()) {
+                        return callback(false);
+                    }
+
+                    var folder = path$1__default.dirname(path);
+                    fs.exists(folder, function(exists) {
+                        if(!exists)
+                            mkdirSync(folder);
+
+                        fs.open(path, 'w', 438, function(err, fd) {
+                            if(err) {
+                                fs.chmod(path, 438, function() {
+                                    fs.open(path, 'w', 438, function(err, fd) {
+                                        fs.write(fd, content, 0, content.length, 0, function() {
+                                            fs.close(fd, function() {
+                                                fs.chmod(path, attr || 438, function() {
+                                                    callback(true);
+                                                });
+                                            });
+                                        });
+                                    });
+                                });
+                            } else {
+                                if(fd) {
+                                    fs.write(fd, content, 0, content.length, 0, function() {
+                                        fs.close(fd, function() {
+                                            fs.chmod(path, attr || 438, function() {
+                                                callback(true);
+                                            });
+                                        });
+                                    });
+                                } else {
+                                    fs.chmod(path, attr || 438, function() {
+                                        callback(true);
+                                    });
+                                }
+                            }
+                        });
+                    });
+                });
+            });
+        },
+
+        findFiles : function(/*String*/path) {
+            return findSync(path, true);
+        },
+
+        getAttributes : function(/*String*/path) {
+
+        },
+
+        setAttributes : function(/*String*/path) {
+
+        },
+
+        toBuffer : function(input) {
+            if (Buffer.isBuffer(input)) {
+                return input;
+            } else {
+                if (input.length === 0) {
+                    return Buffer.alloc(0)
+                }
+                return Buffer.from(input, 'utf8');
+            }
+        },
+
+        readBigUInt64LE,
+
+        Constants : Constants,
+        Errors : Errors
+    }
+})();
+
+var fs$1 = fileSystem.require();
+	
+fs$1.existsSync = fs$1.existsSync || path$1__default.existsSync;
+
+var fattr = function(/*String*/path) {
+
+    var _path = path || "",
+        _obj = newAttr(),
+        _stat = null;
+
+    function newAttr() {
+        return {
+            directory : false,
+            readonly : false,
+            hidden : false,
+            executable : false,
+            mtime : 0,
+            atime : 0
+        }
+    }
+
+    if (_path && fs$1.existsSync(_path)) {
+        _stat = fs$1.statSync(_path);
+        _obj.directory = _stat.isDirectory();
+        _obj.mtime = _stat.mtime;
+        _obj.atime = _stat.atime;
+        _obj.executable = !!(1 & parseInt ((_stat.mode & parseInt ("777", 8)).toString (8)[0]));
+        _obj.readonly = !!(2 & parseInt ((_stat.mode & parseInt ("777", 8)).toString (8)[0]));
+        _obj.hidden = path$1__default.basename(_path)[0] === ".";
+    } else {
+        console.warn("Invalid path: " + _path);
+    }
+
+    return {
+
+        get directory () {
+            return _obj.directory;
+        },
+
+        get readOnly () {
+            return _obj.readonly;
+        },
+
+        get hidden () {
+            return _obj.hidden;
+        },
+
+        get mtime () {
+            return _obj.mtime;
+        },
+
+        get atime () {
+           return _obj.atime;
+        },
+
+
+        get executable () {
+            return _obj.executable;
+        },
+
+        decodeAttributes : function(val) {
+
+        },
+
+        encodeAttributes : function (val) {
+
+        },
+
+        toString : function() {
+           return '{\n' +
+               '\t"path" : "' + _path + ",\n" +
+               '\t"isDirectory" : ' + _obj.directory + ",\n" +
+               '\t"isReadOnly" : ' + _obj.readonly + ",\n" +
+               '\t"isHidden" : ' + _obj.hidden + ",\n" +
+               '\t"isExecutable" : ' + _obj.executable + ",\n" +
+               '\t"mTime" : ' + _obj.mtime + "\n" +
+               '\t"aTime" : ' + _obj.atime + "\n" +
+           '}';
+        }
+    }
+
+};
+
+var util = utils$2;
+var FileSystem = fileSystem;
+var Constants = constants;
+var Errors = errors;
+var FileAttr = fattr;
+util.FileSystem = FileSystem;
+util.Constants = Constants;
+util.Errors = Errors;
+util.FileAttr = FileAttr;
+
+var Constants$1 = util.Constants;
+
+/* The central directory file header */
+var entryHeader = function () {
+    var _verMade = 0x0A,
+        _version = 0x0A,
+        _flags = 0,
+        _method = 0,
+        _time = 0,
+        _crc = 0,
+        _compressedSize = 0,
+        _size = 0,
+        _fnameLen = 0,
+        _extraLen = 0,
+
+        _comLen = 0,
+        _diskStart = 0,
+        _inattr = 0,
+        _attr = 0,
+        _offset = 0;
+
+    var _dataHeader = {};
+
+    function setTime(val) {
+        val = new Date(val);
+        _time = (val.getFullYear() - 1980 & 0x7f) << 25  // b09-16 years from 1980
+            | (val.getMonth() + 1) << 21                 // b05-08 month
+            | val.getDate() << 16                        // b00-04 hour
+
+            // 2 bytes time
+            | val.getHours() << 11    // b11-15 hour
+            | val.getMinutes() << 5   // b05-10 minute
+            | val.getSeconds() >> 1;  // b00-04 seconds divided by 2
+    }
+
+    setTime(+new Date());
+
+    return {
+        get made () { return _verMade; },
+        set made (val) { _verMade = val; },
+
+        get version () { return _version; },
+        set version (val) { _version = val; },
+
+        get flags () { return _flags },
+        set flags (val) { _flags = val; },
+
+        get method () { return _method; },
+        set method (val) { _method = val; },
+
+        get time () { return new Date(
+            ((_time >> 25) & 0x7f) + 1980,
+            ((_time >> 21) & 0x0f) - 1,
+            (_time >> 16) & 0x1f,
+            (_time >> 11) & 0x1f,
+            (_time >> 5) & 0x3f,
+            (_time & 0x1f) << 1
+        );
+        },
+        set time (val) {
+            setTime(val);
+        },
+
+        get crc () { return _crc; },
+        set crc (val) { _crc = val; },
+
+        get compressedSize () { return _compressedSize; },
+        set compressedSize (val) { _compressedSize = val; },
+
+        get size () { return _size; },
+        set size (val) { _size = val; },
+
+        get fileNameLength () { return _fnameLen; },
+        set fileNameLength (val) { _fnameLen = val; },
+
+        get extraLength () { return _extraLen },
+        set extraLength (val) { _extraLen = val; },
+
+        get commentLength () { return _comLen },
+        set commentLength (val) { _comLen = val; },
+
+        get diskNumStart () { return _diskStart },
+        set diskNumStart (val) { _diskStart = val; },
+
+        get inAttr () { return _inattr },
+        set inAttr (val) { _inattr = val; },
+
+        get attr () { return _attr },
+        set attr (val) { _attr = val; },
+
+        get offset () { return _offset },
+        set offset (val) { _offset = val; },
+
+        get encripted () { return (_flags & 1) === 1 },
+
+        get entryHeaderSize () {
+            return Constants$1.CENHDR + _fnameLen + _extraLen + _comLen;
+        },
+
+        get realDataOffset () {
+            return _offset + Constants$1.LOCHDR + _dataHeader.fnameLen + _dataHeader.extraLen;
+        },
+
+        get dataHeader () {
+            return _dataHeader;
+        },
+
+        loadDataHeaderFromBinary : function(/*Buffer*/input) {
+            var data = input.slice(_offset, _offset + Constants$1.LOCHDR);
+            // 30 bytes and should start with "PK\003\004"
+            if (data.readUInt32LE(0) !== Constants$1.LOCSIG) {
+                throw new Error(util.Errors.INVALID_LOC);
+            }
+            _dataHeader = {
+                // version needed to extract
+                version : data.readUInt16LE(Constants$1.LOCVER),
+                // general purpose bit flag
+                flags : data.readUInt16LE(Constants$1.LOCFLG),
+                // compression method
+                method : data.readUInt16LE(Constants$1.LOCHOW),
+                // modification time (2 bytes time, 2 bytes date)
+                time : data.readUInt32LE(Constants$1.LOCTIM),
+                // uncompressed file crc-32 value
+                crc : data.readUInt32LE(Constants$1.LOCCRC),
+                // compressed size
+                compressedSize : data.readUInt32LE(Constants$1.LOCSIZ),
+                // uncompressed size
+                size : data.readUInt32LE(Constants$1.LOCLEN),
+                // filename length
+                fnameLen : data.readUInt16LE(Constants$1.LOCNAM),
+                // extra field length
+                extraLen : data.readUInt16LE(Constants$1.LOCEXT)
+            };
+        },
+
+        loadFromBinary : function(/*Buffer*/data) {
+            // data should be 46 bytes and start with "PK 01 02"
+            if (data.length !== Constants$1.CENHDR || data.readUInt32LE(0) !== Constants$1.CENSIG) {
+                throw new Error(util.Errors.INVALID_CEN);
+            }
+            // version made by
+            _verMade = data.readUInt16LE(Constants$1.CENVEM);
+            // version needed to extract
+            _version = data.readUInt16LE(Constants$1.CENVER);
+            // encrypt, decrypt flags
+            _flags = data.readUInt16LE(Constants$1.CENFLG);
+            // compression method
+            _method = data.readUInt16LE(Constants$1.CENHOW);
+            // modification time (2 bytes time, 2 bytes date)
+            _time = data.readUInt32LE(Constants$1.CENTIM);
+            // uncompressed file crc-32 value
+            _crc = data.readUInt32LE(Constants$1.CENCRC);
+            // compressed size
+            _compressedSize = data.readUInt32LE(Constants$1.CENSIZ);
+            // uncompressed size
+            _size = data.readUInt32LE(Constants$1.CENLEN);
+            // filename length
+            _fnameLen = data.readUInt16LE(Constants$1.CENNAM);
+            // extra field length
+            _extraLen = data.readUInt16LE(Constants$1.CENEXT);
+            // file comment length
+            _comLen = data.readUInt16LE(Constants$1.CENCOM);
+            // volume number start
+            _diskStart = data.readUInt16LE(Constants$1.CENDSK);
+            // internal file attributes
+            _inattr = data.readUInt16LE(Constants$1.CENATT);
+            // external file attributes
+            _attr = data.readUInt32LE(Constants$1.CENATX);
+            // LOC header offset
+            _offset = data.readUInt32LE(Constants$1.CENOFF);
+        },
+
+        dataHeaderToBinary : function() {
+            // LOC header size (30 bytes)
+            var data = Buffer.alloc(Constants$1.LOCHDR);
+            // "PK\003\004"
+            data.writeUInt32LE(Constants$1.LOCSIG, 0);
+            // version needed to extract
+            data.writeUInt16LE(_version, Constants$1.LOCVER);
+            // general purpose bit flag
+            data.writeUInt16LE(_flags, Constants$1.LOCFLG);
+            // compression method
+            data.writeUInt16LE(_method, Constants$1.LOCHOW);
+            // modification time (2 bytes time, 2 bytes date)
+            data.writeUInt32LE(_time, Constants$1.LOCTIM);
+            // uncompressed file crc-32 value
+            data.writeUInt32LE(_crc, Constants$1.LOCCRC);
+            // compressed size
+            data.writeUInt32LE(_compressedSize, Constants$1.LOCSIZ);
+            // uncompressed size
+            data.writeUInt32LE(_size, Constants$1.LOCLEN);
+            // filename length
+            data.writeUInt16LE(_fnameLen, Constants$1.LOCNAM);
+            // extra field length
+            data.writeUInt16LE(_extraLen, Constants$1.LOCEXT);
+            return data;
+        },
+
+        entryHeaderToBinary : function() {
+            // CEN header size (46 bytes)
+            var data = Buffer.alloc(Constants$1.CENHDR + _fnameLen + _extraLen + _comLen);
+            // "PK\001\002"
+            data.writeUInt32LE(Constants$1.CENSIG, 0);
+            // version made by
+            data.writeUInt16LE(_verMade, Constants$1.CENVEM);
+            // version needed to extract
+            data.writeUInt16LE(_version, Constants$1.CENVER);
+            // encrypt, decrypt flags
+            data.writeUInt16LE(_flags, Constants$1.CENFLG);
+            // compression method
+            data.writeUInt16LE(_method, Constants$1.CENHOW);
+            // modification time (2 bytes time, 2 bytes date)
+            data.writeUInt32LE(_time, Constants$1.CENTIM);
+            // uncompressed file crc-32 value
+            data.writeUInt32LE(_crc, Constants$1.CENCRC);
+            // compressed size
+            data.writeUInt32LE(_compressedSize, Constants$1.CENSIZ);
+            // uncompressed size
+            data.writeUInt32LE(_size, Constants$1.CENLEN);
+            // filename length
+            data.writeUInt16LE(_fnameLen, Constants$1.CENNAM);
+            // extra field length
+            data.writeUInt16LE(_extraLen, Constants$1.CENEXT);
+            // file comment length
+            data.writeUInt16LE(_comLen, Constants$1.CENCOM);
+            // volume number start
+            data.writeUInt16LE(_diskStart, Constants$1.CENDSK);
+            // internal file attributes
+            data.writeUInt16LE(_inattr, Constants$1.CENATT);
+            // external file attributes
+            data.writeUInt32LE(_attr, Constants$1.CENATX);
+            // LOC header offset
+            data.writeUInt32LE(_offset, Constants$1.CENOFF);
+            // fill all with
+            data.fill(0x00, Constants$1.CENHDR);
+            return data;
+        },
+
+        toString : function() {
+            return '{\n' +
+                '\t"made" : ' + _verMade + ",\n" +
+                '\t"version" : ' + _version + ",\n" +
+                '\t"flags" : ' + _flags + ",\n" +
+                '\t"method" : ' + util.methodToString(_method) + ",\n" +
+                '\t"time" : ' + this.time + ",\n" +
+                '\t"crc" : 0x' + _crc.toString(16).toUpperCase() + ",\n" +
+                '\t"compressedSize" : ' + _compressedSize + " bytes,\n" +
+                '\t"size" : ' + _size + " bytes,\n" +
+                '\t"fileNameLength" : ' + _fnameLen + ",\n" +
+                '\t"extraLength" : ' + _extraLen + " bytes,\n" +
+                '\t"commentLength" : ' + _comLen + " bytes,\n" +
+                '\t"diskNumStart" : ' + _diskStart + ",\n" +
+                '\t"inAttr" : ' + _inattr + ",\n" +
+                '\t"attr" : ' + _attr + ",\n" +
+                '\t"offset" : ' + _offset + ",\n" +
+                '\t"entryHeaderSize" : ' + (Constants$1.CENHDR + _fnameLen + _extraLen + _comLen) + " bytes\n" +
+                '}';
+        }
+    }
+};
+
+var Constants$2 = util.Constants;
+
+/* The entries in the end of central directory */
+var mainHeader = function () {
+    var _volumeEntries = 0,
+        _totalEntries = 0,
+        _size = 0,
+        _offset = 0,
+        _commentLength = 0;
+
+    return {
+        get diskEntries () { return _volumeEntries },
+        set diskEntries (/*Number*/val) { _volumeEntries = _totalEntries = val; },
+
+        get totalEntries () { return _totalEntries },
+        set totalEntries (/*Number*/val) { _totalEntries = _volumeEntries = val; },
+
+        get size () { return _size },
+        set size (/*Number*/val) { _size = val; },
+
+        get offset () { return _offset },
+        set offset (/*Number*/val) { _offset = val; },
+
+        get commentLength () { return _commentLength },
+        set commentLength (/*Number*/val) { _commentLength = val; },
+
+        get mainHeaderSize () {
+            return Constants$2.ENDHDR + _commentLength;
+        },
+
+        loadFromBinary : function(/*Buffer*/data) {
+            // data should be 22 bytes and start with "PK 05 06"
+            // or be 56+ bytes and start with "PK 06 06" for Zip64
+            if ((data.length !== Constants$2.ENDHDR || data.readUInt32LE(0) !== Constants$2.ENDSIG) &&
+                (data.length < Constants$2.ZIP64HDR || data.readUInt32LE(0) !== Constants$2.ZIP64SIG)) {
+
+                throw new Error(util.Errors.INVALID_END);
+            }
+
+            if (data.readUInt32LE(0) === Constants$2.ENDSIG) {
+                // number of entries on this volume
+                _volumeEntries = data.readUInt16LE(Constants$2.ENDSUB);
+                // total number of entries
+                _totalEntries = data.readUInt16LE(Constants$2.ENDTOT);
+                // central directory size in bytes
+                _size = data.readUInt32LE(Constants$2.ENDSIZ);
+                // offset of first CEN header
+                _offset = data.readUInt32LE(Constants$2.ENDOFF);
+                // zip file comment length
+                _commentLength = data.readUInt16LE(Constants$2.ENDCOM);
+            } else {
+                // number of entries on this volume
+                _volumeEntries = util.readBigUInt64LE(data, Constants$2.ZIP64SUB);
+                // total number of entries
+                _totalEntries = util.readBigUInt64LE(data, Constants$2.ZIP64TOT);
+                // central directory size in bytes
+                _size = util.readBigUInt64LE(data, Constants$2.ZIP64SIZ);
+                // offset of first CEN header
+                _offset = util.readBigUInt64LE(data, Constants$2.ZIP64OFF);
+
+                _commentLength = 0;
+            }
+
+        },
+
+        toBinary : function() {
+           var b = Buffer.alloc(Constants$2.ENDHDR + _commentLength);
+            // "PK 05 06" signature
+            b.writeUInt32LE(Constants$2.ENDSIG, 0);
+            b.writeUInt32LE(0, 4);
+            // number of entries on this volume
+            b.writeUInt16LE(_volumeEntries, Constants$2.ENDSUB);
+            // total number of entries
+            b.writeUInt16LE(_totalEntries, Constants$2.ENDTOT);
+            // central directory size in bytes
+            b.writeUInt32LE(_size, Constants$2.ENDSIZ);
+            // offset of first CEN header
+            b.writeUInt32LE(_offset, Constants$2.ENDOFF);
+            // zip file comment length
+            b.writeUInt16LE(_commentLength, Constants$2.ENDCOM);
+            // fill comment memory with spaces so no garbage is left there
+            b.fill(" ", Constants$2.ENDHDR);
+
+            return b;
+        },
+
+        toString : function() {
+            return '{\n' +
+                '\t"diskEntries" : ' + _volumeEntries + ",\n" +
+                '\t"totalEntries" : ' + _totalEntries + ",\n" +
+                '\t"size" : ' + _size + " bytes,\n" +
+                '\t"offset" : 0x' + _offset.toString(16).toUpperCase() + ",\n" +
+                '\t"commentLength" : 0x' + _commentLength + "\n" +
+            '}';
+        }
+    }
+};
+
+var EntryHeader = entryHeader;
+var MainHeader = mainHeader;
+
+var headers = {
+	EntryHeader: EntryHeader,
+	MainHeader: MainHeader
+};
+
+var deflater = function (/*Buffer*/inbuf) {
+
+  var zlib$1 = zlib;
+  
+  var opts = {chunkSize: (parseInt(inbuf.length / 1024) + 1) * 1024};
+  
+  return {
+    deflate: function () {
+      return zlib$1.deflateRawSync(inbuf, opts);
+    },
+
+    deflateAsync: function (/*Function*/callback) {
+      var tmp = zlib$1.createDeflateRaw(opts), parts = [], total = 0;
+      tmp.on('data', function (data) {
+        parts.push(data);
+        total += data.length;
+      });
+      tmp.on('end', function () {
+        var buf = Buffer.alloc(total), written = 0;
+        buf.fill(0);
+        for (var i = 0; i < parts.length; i++) {
+          var part = parts[i];
+          part.copy(buf, written);
+          written += part.length;
+        }
+        callback && callback(buf);
+      });
+      tmp.end(inbuf);
+    }
+  }
+};
+
+var inflater = function (/*Buffer*/inbuf) {
+
+  var zlib$1 = zlib;
+
+  return {
+    inflate: function () {
+      return zlib$1.inflateRawSync(inbuf);
+    },
+
+    inflateAsync: function (/*Function*/callback) {
+      var tmp = zlib$1.createInflateRaw(), parts = [], total = 0;
+      tmp.on('data', function (data) {
+        parts.push(data);
+        total += data.length;
+      });
+      tmp.on('end', function () {
+        var buf = Buffer.alloc(total), written = 0;
+        buf.fill(0);
+        for (var i = 0; i < parts.length; i++) {
+          var part = parts[i];
+          part.copy(buf, written);
+          written += part.length;
+        }
+        callback && callback(buf);
+      });
+      tmp.end(inbuf);
+    }
+  }
+};
+
+var Deflater = deflater;
+var Inflater = inflater;
+
+var methods = {
+	Deflater: Deflater,
+	Inflater: Inflater
+};
+
+var Constants$3 = util.Constants;
+
+var zipEntry = function (/*Buffer*/input) {
+
+    var _entryHeader = new headers.EntryHeader(),
+        _entryName = Buffer.alloc(0),
+        _comment = Buffer.alloc(0),
+        _isDirectory = false,
+        uncompressedData = null,
+        _extra = Buffer.alloc(0);
+
+    function getCompressedDataFromZip() {
+        if (!input || !Buffer.isBuffer(input)) {
+            return Buffer.alloc(0);
+        }
+        _entryHeader.loadDataHeaderFromBinary(input);
+        return input.slice(_entryHeader.realDataOffset, _entryHeader.realDataOffset + _entryHeader.compressedSize)
+    }
+
+    function crc32OK(data) {
+        // if bit 3 (0x08) of the general-purpose flags field is set, then the CRC-32 and file sizes are not known when the header is written
+        if ((_entryHeader.flags & 0x8) !== 0x8) {
+           if (util.crc32(data) !== _entryHeader.dataHeader.crc) {
+               return false;
+           }
+        }
+        return true;
+    }
+
+    function decompress(/*Boolean*/async, /*Function*/callback, /*String*/pass) {
+        if(typeof callback === 'undefined' && typeof async === 'string') {
+            async=void 0;
+        }
+        if (_isDirectory) {
+            if (async && callback) {
+                callback(Buffer.alloc(0), util.Errors.DIRECTORY_CONTENT_ERROR); //si added error.
+            }
+            return Buffer.alloc(0);
+        }
+
+        var compressedData = getCompressedDataFromZip();
+
+        if (compressedData.length === 0) {
+            // File is empty, nothing to decompress.
+            if (async && callback) callback(compressedData);
+            return compressedData;
+        }
+
+        var data = Buffer.alloc(_entryHeader.size);
+
+        switch (_entryHeader.method) {
+            case util.Constants.STORED:
+                compressedData.copy(data);
+                if (!crc32OK(data)) {
+                    if (async && callback) callback(data, util.Errors.BAD_CRC);//si added error
+                    throw new Error(util.Errors.BAD_CRC);
+                } else {//si added otherwise did not seem to return data.
+                    if (async && callback) callback(data);
+                    return data;
+                }
+            case util.Constants.DEFLATED:
+                var inflater = new methods.Inflater(compressedData);
+                if (!async) {
+                    var result = inflater.inflate(data);
+                    result.copy(data, 0);
+                    if (!crc32OK(data)) {
+                        throw new Error(util.Errors.BAD_CRC + " " + _entryName.toString());
+                    }
+                    return data;
+                } else {
+                    inflater.inflateAsync(function(result) {
+                        result.copy(data, 0);
+                        if (!crc32OK(data)) {
+                            if (callback) callback(data, util.Errors.BAD_CRC); //si added error
+                        } else { //si added otherwise did not seem to return data.
+                            if (callback) callback(data);
+                        }
+                    });
+                }
+                break;
+            default:
+                if (async && callback) callback(Buffer.alloc(0), util.Errors.UNKNOWN_METHOD);
+                throw new Error(util.Errors.UNKNOWN_METHOD);
+        }
+    }
+
+    function compress(/*Boolean*/async, /*Function*/callback) {
+        if ((!uncompressedData || !uncompressedData.length) && Buffer.isBuffer(input)) {
+            // no data set or the data wasn't changed to require recompression
+            if (async && callback) callback(getCompressedDataFromZip());
+            return getCompressedDataFromZip();
+        }
+
+        if (uncompressedData.length && !_isDirectory) {
+            var compressedData;
+            // Local file header
+            switch (_entryHeader.method) {
+                case util.Constants.STORED:
+                    _entryHeader.compressedSize = _entryHeader.size;
+
+                    compressedData = Buffer.alloc(uncompressedData.length);
+                    uncompressedData.copy(compressedData);
+
+                    if (async && callback) callback(compressedData);
+                    return compressedData;
+                default:
+                case util.Constants.DEFLATED:
+
+                    var deflater = new methods.Deflater(uncompressedData);
+                    if (!async) {
+                        var deflated = deflater.deflate();
+                        _entryHeader.compressedSize = deflated.length;
+                        return deflated;
+                    } else {
+                        deflater.deflateAsync(function(data) {
+                            compressedData = Buffer.alloc(data.length);
+                            _entryHeader.compressedSize = data.length;
+                            data.copy(compressedData);
+                            callback && callback(compressedData);
+                        });
+                    }
+                    deflater = null;
+                    break;
+            }
+        } else {
+            if (async && callback) {
+                callback(Buffer.alloc(0));
+            } else {
+                return Buffer.alloc(0);
+            }
+        }
+    }
+
+    function readUInt64LE(buffer, offset) {
+        return (buffer.readUInt32LE(offset + 4) << 4) + buffer.readUInt32LE(offset);
+    }
+
+    function parseExtra(data) {
+        var offset = 0;
+        var signature, size, part;
+        while(offset<data.length) {
+            signature = data.readUInt16LE(offset);
+            offset += 2;
+            size = data.readUInt16LE(offset);
+            offset += 2;
+            part = data.slice(offset, offset+size);
+            offset += size;
+            if(Constants$3.ID_ZIP64 === signature) {
+                parseZip64ExtendedInformation(part);
+            }
+        }
+    }
+
+    //Override header field values with values from the ZIP64 extra field
+    function parseZip64ExtendedInformation(data) {
+        var size, compressedSize, offset, diskNumStart;
+
+        if(data.length >= Constants$3.EF_ZIP64_SCOMP) {
+            size = readUInt64LE(data, Constants$3.EF_ZIP64_SUNCOMP);
+            if(_entryHeader.size === Constants$3.EF_ZIP64_OR_32) {
+                _entryHeader.size = size;
+            }
+        }
+        if(data.length >= Constants$3.EF_ZIP64_RHO) {
+            compressedSize = readUInt64LE(data, Constants$3.EF_ZIP64_SCOMP);
+            if(_entryHeader.compressedSize === Constants$3.EF_ZIP64_OR_32) {
+                _entryHeader.compressedSize = compressedSize;
+            }
+        }
+        if(data.length >= Constants$3.EF_ZIP64_DSN) {
+            offset = readUInt64LE(data, Constants$3.EF_ZIP64_RHO);
+            if(_entryHeader.offset === Constants$3.EF_ZIP64_OR_32) {
+                _entryHeader.offset = offset;
+            }
+        }
+        if(data.length >= Constants$3.EF_ZIP64_DSN+4) {
+            diskNumStart = data.readUInt32LE(Constants$3.EF_ZIP64_DSN);
+            if(_entryHeader.diskNumStart === Constants$3.EF_ZIP64_OR_16) {
+                _entryHeader.diskNumStart = diskNumStart;
+            }
+        }
+    }
+
+
+    return {
+        get entryName () { return _entryName.toString(); },
+        get rawEntryName() { return _entryName; },
+        set entryName (val) {
+            _entryName = util.toBuffer(val);
+            var lastChar = _entryName[_entryName.length - 1];
+            _isDirectory = (lastChar === 47) || (lastChar === 92);
+            _entryHeader.fileNameLength = _entryName.length;
+        },
+
+        get extra () { return _extra; },
+        set extra (val) {
+            _extra = val;
+            _entryHeader.extraLength = val.length;
+            parseExtra(val);
+        },
+
+        get comment () { return _comment.toString(); },
+        set comment (val) {
+            _comment = util.toBuffer(val);
+            _entryHeader.commentLength = _comment.length;
+        },
+
+        get name () { var n = _entryName.toString(); return _isDirectory ? n.substr(n.length - 1).split("/").pop() : n.split("/").pop(); },
+        get isDirectory () { return _isDirectory },
+
+        getCompressedData : function() {
+            return compress(false, null)
+        },
+
+        getCompressedDataAsync : function(/*Function*/callback) {
+            compress(true, callback);
+        },
+
+        setData : function(value) {
+            uncompressedData = util.toBuffer(value);
+            if (!_isDirectory && uncompressedData.length) {
+                _entryHeader.size = uncompressedData.length;
+                _entryHeader.method = util.Constants.DEFLATED;
+                _entryHeader.crc = util.crc32(value);
+                _entryHeader.changed = true;
+            } else { // folders and blank files should be stored
+                _entryHeader.method = util.Constants.STORED;
+            }
+        },
+
+        getData : function(pass) {
+            if (_entryHeader.changed) {
+				return uncompressedData;
+			} else {
+				return decompress(false, null);
+            }
+        },
+
+        getDataAsync : function(/*Function*/callback, pass) {
+			if (_entryHeader.changed) {
+				callback(uncompressedData);
+			} else {
+				decompress(true, callback);
+            }
+        },
+
+        set attr(attr) { _entryHeader.attr = attr; },
+        get attr() { return _entryHeader.attr; },
+
+        set header(/*Buffer*/data) {
+            _entryHeader.loadFromBinary(data);
+        },
+
+        get header() {
+            return _entryHeader;
+        },
+
+        packHeader : function() {
+            var header = _entryHeader.entryHeaderToBinary();
+            // add
+            _entryName.copy(header, util.Constants.CENHDR);
+            if (_entryHeader.extraLength) {
+                _extra.copy(header, util.Constants.CENHDR + _entryName.length);
+            }
+            if (_entryHeader.commentLength) {
+                _comment.copy(header, util.Constants.CENHDR + _entryName.length + _entryHeader.extraLength, _comment.length);
+            }
+            return header;
+        },
+
+        toString : function() {
+            return '{\n' +
+                '\t"entryName" : "' + _entryName.toString() + "\",\n" +
+                '\t"name" : "' + (_isDirectory ? _entryName.toString().replace(/\/$/, '').split("/").pop() : _entryName.toString().split("/").pop()) + "\",\n" +
+                '\t"comment" : "' + _comment.toString() + "\",\n" +
+                '\t"isDirectory" : ' + _isDirectory + ",\n" +
+                '\t"header" : ' + _entryHeader.toString().replace(/\t/mg, "\t\t").replace(/}/mg, "\t}")  + ",\n" +
+                '\t"compressedData" : <' + (input && input.length  + " bytes buffer" || "null") + ">\n" +
+                '\t"data" : <' + (uncompressedData && uncompressedData.length  + " bytes buffer" || "null") + ">\n" +
+                '}';
+        }
+    }
+};
+
+var zipFile = function (/*String|Buffer*/input, /*Number*/inputType) {
+	var entryList = [],
+		entryTable = {},
+		_comment = Buffer.alloc(0),
+		filename = "",
+		fs = util.FileSystem.require(),
+		inBuffer = null,
+		mainHeader = new headers.MainHeader(),
+		loadedEntries = false;
+
+	if (inputType === util.Constants.FILE) {
+		// is a filename
+		filename = input;
+		inBuffer = fs.readFileSync(filename);
+		readMainHeader();
+	} else if (inputType === util.Constants.BUFFER) {
+		// is a memory buffer
+		inBuffer = input;
+		readMainHeader();
+	} else {
+		// none. is a new file
+		loadedEntries = true;
+	}
+
+	function iterateEntries(callback) {
+		const totalEntries = mainHeader.diskEntries; // total number of entries
+		let index = mainHeader.offset; // offset of first CEN header
+
+		for (let i = 0; i < totalEntries; i++) {
+			let tmp = index;
+			const entry = new zipEntry(inBuffer);
+
+			entry.header = inBuffer.slice(tmp, tmp += util.Constants.CENHDR);
+			entry.entryName = inBuffer.slice(tmp, tmp += entry.header.fileNameLength);
+
+			index += entry.header.entryHeaderSize;
+
+			callback(entry);
+		}
+	}
+
+	function readEntries() {
+		loadedEntries = true;
+		entryTable = {};
+		entryList = new Array(mainHeader.diskEntries);  // total number of entries
+		var index = mainHeader.offset;  // offset of first CEN header
+		for (var i = 0; i < entryList.length; i++) {
+
+			var tmp = index,
+				entry = new zipEntry(inBuffer);
+			entry.header = inBuffer.slice(tmp, tmp += util.Constants.CENHDR);
+
+			entry.entryName = inBuffer.slice(tmp, tmp += entry.header.fileNameLength);
+
+			if (entry.header.extraLength) {
+				entry.extra = inBuffer.slice(tmp, tmp += entry.header.extraLength);
+			}
+
+			if (entry.header.commentLength)
+				entry.comment = inBuffer.slice(tmp, tmp + entry.header.commentLength);
+
+			index += entry.header.entryHeaderSize;
+
+			entryList[i] = entry;
+			entryTable[entry.entryName] = entry;
+		}
+	}
+
+	function readMainHeader() {
+		var i = inBuffer.length - util.Constants.ENDHDR, // END header size
+			max = Math.max(0, i - 0xFFFF), // 0xFFFF is the max zip file comment length
+			n = max,
+			endStart = inBuffer.length,
+			endOffset = -1, // Start offset of the END header
+			commentEnd = 0;
+
+		for (i; i >= n; i--) {
+			if (inBuffer[i] !== 0x50) continue; // quick check that the byte is 'P'
+			if (inBuffer.readUInt32LE(i) === util.Constants.ENDSIG) { // "PK\005\006"
+				endOffset = i;
+				commentEnd = i;
+				endStart = i + util.Constants.ENDHDR;
+				// We already found a regular signature, let's look just a bit further to check if there's any zip64 signature
+				n = i - util.Constants.END64HDR;
+				continue;
+			}
+
+			if (inBuffer.readUInt32LE(i) === util.Constants.END64SIG) {
+				// Found a zip64 signature, let's continue reading the whole zip64 record
+				n = max;
+				continue;
+			}
+
+			if (inBuffer.readUInt32LE(i) == util.Constants.ZIP64SIG) {
+				// Found the zip64 record, let's determine it's size
+				endOffset = i;
+				endStart = i + util.readBigUInt64LE(inBuffer, i + util.Constants.ZIP64SIZE) + util.Constants.ZIP64LEAD;
+				break;
+			}
+		}
+
+		if (!~endOffset)
+			throw new Error(util.Errors.INVALID_FORMAT);
+
+		mainHeader.loadFromBinary(inBuffer.slice(endOffset, endStart));
+		if (mainHeader.commentLength) {
+			_comment = inBuffer.slice(commentEnd + util.Constants.ENDHDR);
+		}
+		// readEntries();
+	}
+
+	return {
+		/**
+		 * Returns an array of ZipEntry objects existent in the current opened archive
+		 * @return Array
+		 */
+		get entries() {
+			if (!loadedEntries) {
+				readEntries();
+			}
+			return entryList;
+		},
+
+		/**
+		 * Archive comment
+		 * @return {String}
+		 */
+		get comment() {
+			return _comment.toString();
+		},
+		set comment(val) {
+			mainHeader.commentLength = val.length;
+			_comment = val;
+		},
+
+		getEntryCount: function() {
+			if (!loadedEntries) {
+				return mainHeader.diskEntries;
+			}
+
+			return entryList.length;
+		},
+
+		forEach: function(callback) {
+			if (!loadedEntries) {
+				iterateEntries(callback);
+				return;
+			}
+
+			entryList.forEach(callback);
+		},
+
+		/**
+		 * Returns a reference to the entry with the given name or null if entry is inexistent
+		 *
+		 * @param entryName
+		 * @return ZipEntry
+		 */
+		getEntry: function (/*String*/entryName) {
+			if (!loadedEntries) {
+				readEntries();
+			}
+			return entryTable[entryName] || null;
+		},
+
+		/**
+		 * Adds the given entry to the entry list
+		 *
+		 * @param entry
+		 */
+		setEntry: function (/*ZipEntry*/entry) {
+			if (!loadedEntries) {
+				readEntries();
+			}
+			entryList.push(entry);
+			entryTable[entry.entryName] = entry;
+			mainHeader.totalEntries = entryList.length;
+		},
+
+		/**
+		 * Removes the entry with the given name from the entry list.
+		 *
+		 * If the entry is a directory, then all nested files and directories will be removed
+		 * @param entryName
+		 */
+		deleteEntry: function (/*String*/entryName) {
+			if (!loadedEntries) {
+				readEntries();
+			}
+			var entry = entryTable[entryName];
+			if (entry && entry.isDirectory) {
+				var _self = this;
+				this.getEntryChildren(entry).forEach(function (child) {
+					if (child.entryName !== entryName) {
+						_self.deleteEntry(child.entryName);
+					}
+				});
+			}
+			entryList.splice(entryList.indexOf(entry), 1);
+			delete(entryTable[entryName]);
+			mainHeader.totalEntries = entryList.length;
+		},
+
+		/**
+		 *  Iterates and returns all nested files and directories of the given entry
+		 *
+		 * @param entry
+		 * @return Array
+		 */
+		getEntryChildren: function (/*ZipEntry*/entry) {
+			if (!loadedEntries) {
+				readEntries();
+			}
+			if (entry.isDirectory) {
+				var list = [],
+					name = entry.entryName,
+					len = name.length;
+
+				entryList.forEach(function (zipEntry) {
+					if (zipEntry.entryName.substr(0, len) === name) {
+						list.push(zipEntry);
+					}
+				});
+				return list;
+			}
+			return []
+		},
+
+		/**
+		 * Returns the zip file
+		 *
+		 * @return Buffer
+		 */
+		compressToBuffer: function () {
+			if (!loadedEntries) {
+				readEntries();
+			}
+			if (entryList.length > 1) {
+				entryList.sort(function (a, b) {
+					var nameA = a.entryName.toLowerCase();
+					var nameB = b.entryName.toLowerCase();
+					if (nameA < nameB) {
+						return -1
+					}
+					if (nameA > nameB) {
+						return 1
+					}
+					return 0;
+				});
+			}
+
+			var totalSize = 0,
+				dataBlock = [],
+				entryHeaders = [],
+				dindex = 0;
+
+			mainHeader.size = 0;
+			mainHeader.offset = 0;
+
+			entryList.forEach(function (entry) {
+				// compress data and set local and entry header accordingly. Reason why is called first
+				var compressedData = entry.getCompressedData();
+				// data header
+				entry.header.offset = dindex;
+				var dataHeader = entry.header.dataHeaderToBinary();
+				var entryNameLen = entry.rawEntryName.length;
+				var extra = entry.extra.toString();
+				var postHeader = Buffer.alloc(entryNameLen + extra.length);
+				entry.rawEntryName.copy(postHeader, 0);
+				postHeader.fill(extra, entryNameLen);
+
+				var dataLength = dataHeader.length + postHeader.length + compressedData.length;
+
+				dindex += dataLength;
+
+				dataBlock.push(dataHeader);
+				dataBlock.push(postHeader);
+				dataBlock.push(compressedData);
+
+				var entryHeader = entry.packHeader();
+				entryHeaders.push(entryHeader);
+				mainHeader.size += entryHeader.length;
+				totalSize += (dataLength + entryHeader.length);
+			});
+
+			totalSize += mainHeader.mainHeaderSize; // also includes zip file comment length
+			// point to end of data and beginning of central directory first record
+			mainHeader.offset = dindex;
+
+			dindex = 0;
+			var outBuffer = Buffer.alloc(totalSize);
+			dataBlock.forEach(function (content) {
+				content.copy(outBuffer, dindex); // write data blocks
+				dindex += content.length;
+			});
+			entryHeaders.forEach(function (content) {
+				content.copy(outBuffer, dindex); // write central directory entries
+				dindex += content.length;
+			});
+
+			var mh = mainHeader.toBinary();
+			if (_comment) {
+				Buffer.from(_comment).copy(mh, util.Constants.ENDHDR); // add zip file comment
+			}
+
+			mh.copy(outBuffer, dindex); // write main header
+
+			return outBuffer
+		},
+
+		toAsyncBuffer: function (/*Function*/onSuccess, /*Function*/onFail, /*Function*/onItemStart, /*Function*/onItemEnd) {
+			if (!loadedEntries) {
+				readEntries();
+			}
+			if (entryList.length > 1) {
+				entryList.sort(function (a, b) {
+					var nameA = a.entryName.toLowerCase();
+					var nameB = b.entryName.toLowerCase();
+					if (nameA > nameB) {
+						return -1
+					}
+					if (nameA < nameB) {
+						return 1
+					}
+					return 0;
+				});
+			}
+
+			var totalSize = 0,
+				dataBlock = [],
+				entryHeaders = [],
+				dindex = 0;
+
+			mainHeader.size = 0;
+			mainHeader.offset = 0;
+
+			var compress = function (entryList) {
+				var self = arguments.callee;
+				if (entryList.length) {
+					var entry = entryList.pop();
+					var name = entry.entryName + entry.extra.toString();
+					if (onItemStart) onItemStart(name);
+					entry.getCompressedDataAsync(function (compressedData) {
+						if (onItemEnd) onItemEnd(name);
+
+						entry.header.offset = dindex;
+						// data header
+						var dataHeader = entry.header.dataHeaderToBinary();
+						var postHeader;
+						try {
+							postHeader = Buffer.alloc(name.length, name);  // using alloc will work on node  5.x+
+						} catch(e){
+							postHeader = new Buffer(name); // use deprecated method if alloc fails...
+						}
+						var dataLength = dataHeader.length + postHeader.length + compressedData.length;
+
+						dindex += dataLength;
+
+						dataBlock.push(dataHeader);
+						dataBlock.push(postHeader);
+						dataBlock.push(compressedData);
+
+						var entryHeader = entry.packHeader();
+						entryHeaders.push(entryHeader);
+						mainHeader.size += entryHeader.length;
+						totalSize += (dataLength + entryHeader.length);
+
+						if (entryList.length) {
+							self(entryList);
+						} else {
+
+
+							totalSize += mainHeader.mainHeaderSize; // also includes zip file comment length
+							// point to end of data and beginning of central directory first record
+							mainHeader.offset = dindex;
+
+							dindex = 0;
+							var outBuffer = Buffer.alloc(totalSize);
+							dataBlock.forEach(function (content) {
+								content.copy(outBuffer, dindex); // write data blocks
+								dindex += content.length;
+							});
+							entryHeaders.forEach(function (content) {
+								content.copy(outBuffer, dindex); // write central directory entries
+								dindex += content.length;
+							});
+
+							var mh = mainHeader.toBinary();
+							if (_comment) {
+								_comment.copy(mh, util.Constants.ENDHDR); // add zip file comment
+							}
+
+							mh.copy(outBuffer, dindex); // write main header
+
+							onSuccess(outBuffer);
+						}
+					});
+				}
+			};
+
+			compress(entryList);
+		}
+	}
+};
+
+var fs$2 = util.FileSystem.require();
+
+fs$2.existsSync = fs$2.existsSync || path$1__default.existsSync;
+
+
+
+var isWin = /^win/.test(process.platform);
+
+
+var admZip = function (/**String*/input) {
+	var _zip = undefined,
+		_filename = "";
+
+	if (input && typeof input === "string") { // load zip file
+		if (fs$2.existsSync(input)) {
+			_filename = input;
+			_zip = new zipFile(input, util.Constants.FILE);
+		} else {
+			throw new Error(util.Errors.INVALID_FILENAME);
+		}
+	} else if (input && Buffer.isBuffer(input)) { // load buffer
+		_zip = new zipFile(input, util.Constants.BUFFER);
+	} else { // create new zip file
+		_zip = new zipFile(null, util.Constants.NONE);
+	}
+
+	function sanitize(prefix, name) {
+		prefix = path$1__default.resolve(path$1__default.normalize(prefix));
+		var parts = name.split('/');
+		for (var i = 0, l = parts.length; i < l; i++) {
+			var path = path$1__default.normalize(path$1__default.join(prefix, parts.slice(i, l).join(path$1__default.sep)));
+			if (path.indexOf(prefix) === 0) {
+				return path;
+			}
+		}
+		return path$1__default.normalize(path$1__default.join(prefix, path$1__default.basename(name)));
+	}
+
+	function getEntry(/**Object*/entry) {
+		if (entry && _zip) {
+			var item;
+			// If entry was given as a file name
+			if (typeof entry === "string")
+				item = _zip.getEntry(entry);
+			// if entry was given as a ZipEntry object
+			if (typeof entry === "object" && typeof entry.entryName !== "undefined" && typeof entry.header !== "undefined")
+				item = _zip.getEntry(entry.entryName);
+
+			if (item) {
+				return item;
+			}
+		}
+		return null;
+	}
+
+	return {
+		/**
+		 * Extracts the given entry from the archive and returns the content as a Buffer object
+		 * @param entry ZipEntry object or String with the full path of the entry
+		 *
+		 * @return Buffer or Null in case of error
+		 */
+		readFile: function (/**Object*/entry) {
+			var item = getEntry(entry);
+			return item && item.getData() || null;
+		},
+
+		/**
+		 * Asynchronous readFile
+		 * @param entry ZipEntry object or String with the full path of the entry
+		 * @param callback
+		 *
+		 * @return Buffer or Null in case of error
+		 */
+		readFileAsync: function (/**Object*/entry, /**Function*/callback) {
+			var item = getEntry(entry);
+			if (item) {
+				item.getDataAsync(callback);
+			} else {
+				callback(null, "getEntry failed for:" + entry);
+			}
+		},
+
+		/**
+		 * Extracts the given entry from the archive and returns the content as plain text in the given encoding
+		 * @param entry ZipEntry object or String with the full path of the entry
+		 * @param encoding Optional. If no encoding is specified utf8 is used
+		 *
+		 * @return String
+		 */
+		readAsText: function (/**Object*/entry, /**String=*/encoding) {
+			var item = getEntry(entry);
+			if (item) {
+				var data = item.getData();
+				if (data && data.length) {
+					return data.toString(encoding || "utf8");
+				}
+			}
+			return "";
+		},
+
+		/**
+		 * Asynchronous readAsText
+		 * @param entry ZipEntry object or String with the full path of the entry
+		 * @param callback
+		 * @param encoding Optional. If no encoding is specified utf8 is used
+		 *
+		 * @return String
+		 */
+		readAsTextAsync: function (/**Object*/entry, /**Function*/callback, /**String=*/encoding) {
+			var item = getEntry(entry);
+			if (item) {
+				item.getDataAsync(function (data, err) {
+					if (err) {
+						callback(data, err);
+						return;
+					}
+
+					if (data && data.length) {
+						callback(data.toString(encoding || "utf8"));
+					} else {
+						callback("");
+					}
+				});
+			} else {
+				callback("");
+			}
+		},
+
+		/**
+		 * Remove the entry from the file or the entry and all it's nested directories and files if the given entry is a directory
+		 *
+		 * @param entry
+		 */
+		deleteFile: function (/**Object*/entry) { // @TODO: test deleteFile
+			var item = getEntry(entry);
+			if (item) {
+				_zip.deleteEntry(item.entryName);
+			}
+		},
+
+		/**
+		 * Adds a comment to the zip. The zip must be rewritten after adding the comment.
+		 *
+		 * @param comment
+		 */
+		addZipComment: function (/**String*/comment) { // @TODO: test addZipComment
+			_zip.comment = comment;
+		},
+
+		/**
+		 * Returns the zip comment
+		 *
+		 * @return String
+		 */
+		getZipComment: function () {
+			return _zip.comment || '';
+		},
+
+		/**
+		 * Adds a comment to a specified zipEntry. The zip must be rewritten after adding the comment
+		 * The comment cannot exceed 65535 characters in length
+		 *
+		 * @param entry
+		 * @param comment
+		 */
+		addZipEntryComment: function (/**Object*/entry, /**String*/comment) {
+			var item = getEntry(entry);
+			if (item) {
+				item.comment = comment;
+			}
+		},
+
+		/**
+		 * Returns the comment of the specified entry
+		 *
+		 * @param entry
+		 * @return String
+		 */
+		getZipEntryComment: function (/**Object*/entry) {
+			var item = getEntry(entry);
+			if (item) {
+				return item.comment || '';
+			}
+			return ''
+		},
+
+		/**
+		 * Updates the content of an existing entry inside the archive. The zip must be rewritten after updating the content
+		 *
+		 * @param entry
+		 * @param content
+		 */
+		updateFile: function (/**Object*/entry, /**Buffer*/content) {
+			var item = getEntry(entry);
+			if (item) {
+				item.setData(content);
+			}
+		},
+
+		/**
+		 * Adds a file from the disk to the archive
+		 *
+		 * @param localPath File to add to zip
+		 * @param zipPath Optional path inside the zip
+		 * @param zipName Optional name for the file
+		 */
+		addLocalFile: function (/**String*/localPath, /**String=*/zipPath, /**String=*/zipName) {
+			if (fs$2.existsSync(localPath)) {
+				if (zipPath) {
+					zipPath = zipPath.split("\\").join("/");
+					if (zipPath.charAt(zipPath.length - 1) !== "/") {
+						zipPath += "/";
+					}
+				} else {
+					zipPath = "";
+				}
+				var p = localPath.split("\\").join("/").split("/").pop();
+
+				if (zipName) {
+					this.addFile(zipPath + zipName, fs$2.readFileSync(localPath), "", 0);
+				} else {
+					this.addFile(zipPath + p, fs$2.readFileSync(localPath), "", 0);
+				}
+			} else {
+				throw new Error(util.Errors.FILE_NOT_FOUND.replace("%s", localPath));
+			}
+		},
+
+		/**
+		 * Adds a local directory and all its nested files and directories to the archive
+		 *
+		 * @param localPath
+		 * @param zipPath optional path inside zip
+		 * @param filter optional RegExp or Function if files match will
+		 *               be included.
+		 */
+		addLocalFolder: function (/**String*/localPath, /**String=*/zipPath, /**=RegExp|Function*/filter) {
+			if (filter === undefined) {
+				filter = function () {
+					return true;
+				};
+			} else if (filter instanceof RegExp) {
+				filter = function (filter) {
+					return function (filename) {
+						return filter.test(filename);
+					}
+				}(filter);
+			}
+
+			if (zipPath) {
+				zipPath = zipPath.split("\\").join("/");
+				if (zipPath.charAt(zipPath.length - 1) !== "/") {
+					zipPath += "/";
+				}
+			} else {
+				zipPath = "";
+			}
+			// normalize the path first
+			localPath = path$1__default.normalize(localPath);
+			localPath = localPath.split("\\").join("/"); //windows fix
+			if (localPath.charAt(localPath.length - 1) !== "/")
+				localPath += "/";
+
+			if (fs$2.existsSync(localPath)) {
+
+				var items = util.findFiles(localPath),
+					self = this;
+
+				if (items.length) {
+					items.forEach(function (path) {
+						var p = path.split("\\").join("/").replace(new RegExp(localPath.replace(/(\(|\)|\$)/g, '\\$1'), 'i'), ""); //windows fix
+						if (filter(p)) {
+							if (p.charAt(p.length - 1) !== "/") {
+								self.addFile(zipPath + p, fs$2.readFileSync(path), "", 0);
+							} else {
+								self.addFile(zipPath + p, Buffer.alloc(0), "", 0);
+							}
+						}
+					});
+				}
+			} else {
+				throw new Error(util.Errors.FILE_NOT_FOUND.replace("%s", localPath));
+			}
+		},
+
+		/**
+		 * Asynchronous addLocalFile
+		 * @param localPath
+		 * @param callback
+		 * @param zipPath optional path inside zip
+		 * @param filter optional RegExp or Function if files match will
+		 *               be included.
+		 */
+		addLocalFolderAsync: function (/*String*/localPath, /*Function*/callback, /*String*/zipPath, /*RegExp|Function*/filter) {
+			if (filter === undefined) {
+				filter = function () {
+					return true;
+				};
+			} else if (filter instanceof RegExp) {
+				filter = function (filter) {
+					return function (filename) {
+						return filter.test(filename);
+					}
+				}(filter);
+			}
+
+			if (zipPath) {
+				zipPath = zipPath.split("\\").join("/");
+				if (zipPath.charAt(zipPath.length - 1) !== "/") {
+					zipPath += "/";
+				}
+			} else {
+				zipPath = "";
+			}
+			// normalize the path first
+			localPath = path$1__default.normalize(localPath);
+			localPath = localPath.split("\\").join("/"); //windows fix
+			if (localPath.charAt(localPath.length - 1) !== "/")
+				localPath += "/";
+
+			var self = this;
+			fs$2.open(localPath, 'r', function (err, fd) {
+				if (err && err.code === 'ENOENT') {
+					callback(undefined, util.Errors.FILE_NOT_FOUND.replace("%s", localPath));
+				} else if (err) {
+					callback(undefined, err);
+				} else {
+					var items = util.findFiles(localPath);
+					var i = -1;
+
+					var next = function () {
+						i += 1;
+						if (i < items.length) {
+							var p = items[i].split("\\").join("/").replace(new RegExp(localPath.replace(/(\(|\))/g, '\\$1'), 'i'), ""); //windows fix
+							p = p.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7E]/g, ''); // accent fix
+							if (filter(p)) {
+								if (p.charAt(p.length - 1) !== "/") {
+									fs$2.readFile(items[i], function (err, data) {
+										if (err) {
+											callback(undefined, err);
+										} else {
+											self.addFile(zipPath + p, data, '', 0);
+											next();
+										}
+									});
+								} else {
+									self.addFile(zipPath + p, Buffer.alloc(0), "", 0);
+									next();
+								}
+							} else {
+								next();
+							}
+
+						} else {
+							callback(true, undefined);
+						}
+					};
+
+					next();
+				}
+			});
+		},
+
+		/**
+		 * Allows you to create a entry (file or directory) in the zip file.
+		 * If you want to create a directory the entryName must end in / and a null buffer should be provided.
+		 * Comment and attributes are optional
+		 *
+		 * @param entryName
+		 * @param content
+		 * @param comment
+		 * @param attr
+		 */
+		addFile: function (/**String*/entryName, /**Buffer*/content, /**String*/comment, /**Number*/attr) {
+			var entry = new zipEntry();
+			entry.entryName = entryName;
+			entry.comment = comment || "";
+
+			if (!attr) {
+				if (entry.isDirectory) {
+					attr = (0o40755 << 16) | 0x10; // (permissions drwxr-xr-x) + (MS-DOS directory flag)
+				} else {
+					attr = 0o644 << 16; // permissions -r-wr--r--
+				}
+			}
+
+			entry.attr = attr;
+
+			entry.setData(content);
+			_zip.setEntry(entry);
+		},
+
+		/**
+		 * Returns an array of ZipEntry objects representing the files and folders inside the archive
+		 *
+		 * @return Array
+		 */
+		getEntries: function () {
+			if (_zip) {
+				return _zip.entries;
+			} else {
+				return [];
+			}
+		},
+
+		/**
+		 * Returns a ZipEntry object representing the file or folder specified by ``name``.
+		 *
+		 * @param name
+		 * @return ZipEntry
+		 */
+		getEntry: function (/**String*/name) {
+			return getEntry(name);
+		},
+
+		getEntryCount: function() {
+			return _zip.getEntryCount();
+		},
+
+		forEach: function(callback) {
+			return _zip.forEach(callback);
+		},
+
+		/**
+		 * Extracts the given entry to the given targetPath
+		 * If the entry is a directory inside the archive, the entire directory and it's subdirectories will be extracted
+		 *
+		 * @param entry ZipEntry object or String with the full path of the entry
+		 * @param targetPath Target folder where to write the file
+		 * @param maintainEntryPath If maintainEntryPath is true and the entry is inside a folder, the entry folder
+		 *                          will be created in targetPath as well. Default is TRUE
+		 * @param overwrite If the file already exists at the target path, the file will be overwriten if this is true.
+		 *                  Default is FALSE
+		 *
+		 * @return Boolean
+		 */
+		extractEntryTo: function (/**Object*/entry, /**String*/targetPath, /**Boolean*/maintainEntryPath, /**Boolean*/overwrite) {
+			overwrite = overwrite || false;
+			maintainEntryPath = typeof maintainEntryPath === "undefined" ? true : maintainEntryPath;
+
+			var item = getEntry(entry);
+			if (!item) {
+				throw new Error(util.Errors.NO_ENTRY);
+			}
+
+			var entryName = item.entryName;
+
+			var target = sanitize(targetPath, maintainEntryPath ? entryName : path$1__default.basename(entryName));
+
+			if (item.isDirectory) {
+				target = path$1__default.resolve(target, "..");
+				var children = _zip.getEntryChildren(item);
+				children.forEach(function (child) {
+					if (child.isDirectory) return;
+					var content = child.getData();
+					if (!content) {
+						throw new Error(util.Errors.CANT_EXTRACT_FILE);
+					}
+					var childName = sanitize(targetPath, maintainEntryPath ? child.entryName : path$1__default.basename(child.entryName));
+
+					util.writeFileTo(childName, content, overwrite);
+				});
+				return true;
+			}
+
+			var content = item.getData();
+			if (!content) throw new Error(util.Errors.CANT_EXTRACT_FILE);
+
+			if (fs$2.existsSync(target) && !overwrite) {
+				throw new Error(util.Errors.CANT_OVERRIDE);
+			}
+			util.writeFileTo(target, content, overwrite);
+
+			return true;
+		},
+
+		/**
+		 * Test the archive
+		 *
+		 */
+		test: function () {
+			if (!_zip) {
+				return false;
+			}
+
+			for (var entry in _zip.entries) {
+				try {
+					if (entry.isDirectory) {
+						continue;
+					}
+					var content = _zip.entries[entry].getData();
+					if (!content) {
+						return false;
+					}
+				} catch (err) {
+					return false;
+				}
+			}
+			return true;
+		},
+
+		/**
+		 * Extracts the entire archive to the given location
+		 *
+		 * @param targetPath Target location
+		 * @param overwrite If the file already exists at the target path, the file will be overwriten if this is true.
+		 *                  Default is FALSE
+		 */
+		extractAllTo: function (/**String*/targetPath, /**Boolean*/overwrite) {
+			overwrite = overwrite || false;
+			if (!_zip) {
+				throw new Error(util.Errors.NO_ZIP);
+			}
+			_zip.entries.forEach(function (entry) {
+				var entryName = sanitize(targetPath, entry.entryName.toString());
+				if (entry.isDirectory) {
+					util.makeDir(entryName);
+					return;
+				}
+				var content = entry.getData();
+				if (!content) {
+					throw new Error(util.Errors.CANT_EXTRACT_FILE);
+				}
+				util.writeFileTo(entryName, content, overwrite);
+				try {
+					fs$2.utimesSync(entryName, entry.header.time, entry.header.time);
+				} catch (err) {
+					throw new Error(util.Errors.CANT_EXTRACT_FILE);
+				}
+			});
+		},
+
+		/**
+		 * Asynchronous extractAllTo
+		 *
+		 * @param targetPath Target location
+		 * @param overwrite If the file already exists at the target path, the file will be overwriten if this is true.
+		 *                  Default is FALSE
+		 * @param callback
+		 */
+		extractAllToAsync: function (/**String*/targetPath, /**Boolean*/overwrite, /**Function*/callback) {
+			if (!callback) {
+				callback = function() {};
+			}
+			overwrite = overwrite || false;
+			if (!_zip) {
+				callback(new Error(util.Errors.NO_ZIP));
+				return;
+			}
+
+			var entries = _zip.entries;
+			var i = entries.length;
+			entries.forEach(function (entry) {
+				if (i <= 0) return; // Had an error already
+
+				var entryName = path$1__default.normalize(entry.entryName.toString());
+
+				if (entry.isDirectory) {
+					util.makeDir(sanitize(targetPath, entryName));
+					if (--i === 0)
+						callback(undefined);
+					return;
+				}
+				entry.getDataAsync(function (content, err) {
+					if (i <= 0) return;
+					if (err) {
+						callback(new Error(err));
+						return;
+					}
+					if (!content) {
+						i = 0;
+						callback(new Error(util.Errors.CANT_EXTRACT_FILE));
+						return;
+					}
+
+					util.writeFileToAsync(sanitize(targetPath, entryName), content, overwrite, function (succ) {
+						try {
+							fs$2.utimesSync(path$1__default.resolve(targetPath, entryName), entry.header.time, entry.header.time);
+						} catch (err) {
+							callback(new Error('Unable to set utimes'));
+						}
+						if (i <= 0) return;
+						if (!succ) {
+							i = 0;
+							callback(new Error('Unable to write'));
+							return;
+						}
+						if (--i === 0)
+							callback(undefined);
+					});
+				});
+			});
+		},
+
+		/**
+		 * Writes the newly created zip file to disk at the specified location or if a zip was opened and no ``targetFileName`` is provided, it will overwrite the opened zip
+		 *
+		 * @param targetFileName
+		 * @param callback
+		 */
+		writeZip: function (/**String*/targetFileName, /**Function*/callback) {
+			if (arguments.length === 1) {
+				if (typeof targetFileName === "function") {
+					callback = targetFileName;
+					targetFileName = "";
+				}
+			}
+
+			if (!targetFileName && _filename) {
+				targetFileName = _filename;
+			}
+			if (!targetFileName) return;
+
+			var zipData = _zip.compressToBuffer();
+			if (zipData) {
+				var ok = util.writeFileTo(targetFileName, zipData, true);
+				if (typeof callback === 'function') callback(!ok ? new Error("failed") : null, "");
+			}
+		},
+
+		/**
+		 * Returns the content of the entire zip file as a Buffer object
+		 *
+		 * @return Buffer
+		 */
+		toBuffer: function (/**Function=*/onSuccess, /**Function=*/onFail, /**Function=*/onItemStart, /**Function=*/onItemEnd) {
+			this.valueOf = 2;
+			if (typeof onSuccess === "function") {
+				_zip.toAsyncBuffer(onSuccess, onFail, onItemStart, onItemEnd);
+				return null;
+			}
+			return _zip.compressToBuffer()
+		}
+	}
+};
+
+var admZip$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.assign(/*#__PURE__*/Object.create(null), admZip, {
+    'default': admZip,
+    __moduleExports: admZip
+}));
+
 var Inputs;
 (function (Inputs) {
     Inputs["Name"] = "name";
@@ -7328,51 +10237,121 @@ var Inputs;
     Inputs["Repo"] = "repo";
     Inputs["Owner"] = "owner";
     Inputs["GithubToken"] = "github_token";
-    Inputs["Commit"] = "commit";
     Inputs["Branch"] = "branch";
-    Inputs["PR"] = "pr";
+    Inputs["Commit"] = "commit";
 })(Inputs || (Inputs = {}));
 const setDefaults = (defaultVal) => when(isEmpty, always(defaultVal));
+const getActionInputs = () => {
+    const name = core.getInput(Inputs.Name, { required: true });
+    const workflow = core.getInput(Inputs.Workflow, { required: true });
+    const githubToken = core.getInput(Inputs.GithubToken, { required: true });
+    const repo = setDefaults(github.context.repo.repo)(core.getInput(Inputs.Repo, { required: false }));
+    const owner = setDefaults(github.context.repo.owner)(core.getInput(Inputs.Owner, { required: false }));
+    const branch = core.getInput(Inputs.Branch, { required: false });
+    const commit = core.getInput(Inputs.Commit, { required: false });
+    const path = setDefaults('~')(core.getInput(Inputs.Path, { required: false }));
+    return {
+        name,
+        workflow,
+        githubToken,
+        repo,
+        owner,
+        branch,
+        commit,
+        path,
+    };
+};
+const pathLens = lens(prop('path'), assoc('path'));
+const transformPath = when(compose(test(/^~/), view(pathLens)), over(pathLens, path => path.replace('~', os.homedir())));
+const unzip = (archive, path) => {
+    const zip = new admZip$1(Buffer.from(archive));
+    zip.getEntries().forEach((entry) => {
+        console.log('Extract: ', path$1.resolve(path, entry.entryName));
+    });
+    zip.extractAllTo(path$1.resolve(path), true);
+};
+
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const name = core.getInput(Inputs.Name, { required: true });
-            const workflow = core.getInput(Inputs.Workflow, { required: true });
-            const githubToken = core.getInput(Inputs.GithubToken, { required: true });
-            const repo = setDefaults(github.context.repo.repo)(core.getInput(Inputs.Repo, { required: false }));
-            const owner = setDefaults(github.context.repo.owner)(core.getInput(Inputs.Owner, { required: false }));
-            const branch = setDefaults('master')(core.getInput(Inputs.Branch, { required: false }));
-            let path = core.getInput(Inputs.Path, { required: false });
-            if (path.indexOf('~') === 0) {
-                path = path.replace('~', os.homedir());
-            }
-            console.log(JSON.stringify(github.context.repo, null, ' '));
-            console.log(repo);
-            console.log(owner);
-            console.log(branch);
-            console.log(path);
+            const { name, workflow, githubToken, repo, owner, branch, commit, path, } = compose(transformPath, getActionInputs)();
+            core.info(`###: Connecting to ${owner}/${repo}`);
             const octokit = github.getOctokit(githubToken);
-            console.log('octokit');
+            core.info(`###: Connected to ${owner}/${repo}`);
             const workflowList = yield octokit.actions.listRepoWorkflows({
                 owner,
                 repo,
             });
-            console.log('workflowList');
-            const currWorkflow = find$1(compose(test(new RegExp(workflow)), prop('path')))(workflowList.data.workflows);
-            core.info(JSON.stringify(currWorkflow, null, ' '));
-            const workflowRuns = yield octokit.actions.listWorkflowRuns({
+            core.info(`###: Look for workflow ${workflow}`);
+            const selectedWorkflow = find$1(compose(test(new RegExp(workflow)), prop('path')))(workflowList.data.workflows);
+            if (!selectedWorkflow) {
+                throw new Error(`Repository ${owner}/${repo} has no workflow with path: ${workflow}`);
+            }
+            core.info(`###: Found workflow ${workflow} - id ${selectedWorkflow.id}`);
+            let run;
+            let page = 1;
+            core.info(`###: Look for workflow runs that satisfy search params:
+        ${branch ? `- branch: ${branch}` : ''}
+        ${commit ? `- commit: ${commit}` : ''}
+      `);
+            while (!run) {
+                const workflowRuns = yield octokit.actions.listWorkflowRuns({
+                    owner,
+                    repo,
+                    workflow_id: selectedWorkflow.id,
+                    status: 'completed',
+                    branch,
+                    per_page: 100,
+                    page,
+                });
+                // 1. branch: status
+                // 2. pr: commit
+                // 3. commit: commit
+                // 4. last successful: status
+                run = cond([
+                    [
+                        partial(complement(isEmpty), [branch]),
+                        find$1(propEq('status', 'completed')),
+                    ],
+                    [
+                        partial(complement(isEmpty), [commit]),
+                        find$1(propEq('head_sha', commit)),
+                    ],
+                    [
+                        T,
+                        find$1(propEq('status', 'completed')),
+                    ],
+                ])(workflowRuns.data.workflow_runs);
+                page += 1;
+            }
+            if (!run) {
+                throw new Error(`Repository ${owner}/${repo} has no workflow runs (path: ${workflow}) that satisfy search params:
+          - branch: ${branch}
+          - commit: ${commit}
+        Or this workflow hasn't started yet.
+        Remember that if branch and commit specified simultaneously - branch
+        have precedence over commit.
+        `);
+            }
+            core.info(`###: Get artifacts`);
+            const artifacts = yield octokit.actions.listWorkflowRunArtifacts({
                 owner,
                 repo,
-                workflow_id: defaultTo(0)(currWorkflow === null || currWorkflow === void 0 ? void 0 : currWorkflow.id),
-                status: 'completed',
-                branch,
+                run_id: run.id,
             });
-            console.log('');
-            core.info(JSON.stringify(workflowRuns, null, ' '));
-            console.log('');
-            console.log('homedir', os.homedir());
-            console.log('');
-            console.log('github', github$1);
+            const artifact = find$1(propEq('name', name))(artifacts.data.artifacts);
+            if (!artifact) {
+                throw new Error(`Repository ${owner}/${repo} has no artifact in ${workflow} with name: ${name}`);
+            }
+            core.info(`###: Download artifact ${name} into ${path} directory`);
+            const artifactArchive = yield octokit.actions.downloadArtifact({
+                repo,
+                owner,
+                artifact_id: artifact.id,
+                archive_format: 'zip',
+            });
+            unzip(artifactArchive, path);
+            core.info(`###: Artifact ${name} from ${owner}/${repo} was successfuly downloaded`);
         }
         catch (e) {
             core.setFailed(e.message);

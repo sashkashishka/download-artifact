@@ -5,22 +5,27 @@ inputs:
   name:
     description: 'Artifact name'
     required: true
-  github_token:
-    description: 'Github access token'
-    required: true
   workflow:
     description: 'Workflows file name with extension'
+    required: true
+  github_token:
+    description: 'Github access token'
     required: true
   path:
     description: 'Destination path. If not specified - defaults to root of project'
     required: false
-  owner:
-    description: 'Owner of repository. If not specified - defaults to current'
-    required: false
   repo:
     description: 'Name of the repository. If not specified - defaults to current'
     required: false
-  
+  owner:
+    description: 'Owner of repository. If not specified - defaults to current'
+    required: false
+  branch:
+    description: 'Branch'
+    required: true
+  commit:
+    description: 'Commit'
+    required: true
 runs:
   using: 'node12'
   main: 'dist/index.js'

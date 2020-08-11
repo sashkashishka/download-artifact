@@ -13,6 +13,7 @@
   "devDependencies": {
     "@rollup/plugin-commonjs": "14.0.0",
     "@rollup/plugin-node-resolve": "8.4.0",
+    "@types/adm-zip": "^0",
     "@types/ramda": "^0",
     "rollup": "2.23.1",
     "rollup-plugin-typescript2": "0.27.2",
@@ -20,11 +21,10 @@
     "typescript": "3.9.7"
   },
   "dependencies": {
-    "@actions/artifact": "0.3.5",
     "@actions/core": "1.2.4",
     "@actions/github": "4.0.0",
     "@octokit/types": "5.4.0",
-    "@octokit/webhooks": "7.9.3",
+    "adm-zip": "0.4.16",
     "ramda": "0.27.1"
   }
 }

@@ -1,7 +1,9 @@
 import { homedir } from 'os';
+import { resolve } from 'path';
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 import * as R from 'ramda';
+import * as admZip from 'adm-zip';
 
 enum Inputs {
   Name = 'name',
@@ -46,7 +48,11 @@ export const getActionInputs = (): Output => {
   );
   const branch = core.getInput(Inputs.Branch, { required: false });
   const commit = core.getInput(Inputs.Commit, { required: false });
-  let path = core.getInput(Inputs.Path, { required: false });
+  const path = setDefaults(
+    '~'
+  )(
+    core.getInput(Inputs.Path, { required: false })
+  );
 
   return {
     name,
@@ -69,3 +75,13 @@ export const transformPath = R.when<Output, Output>(
   ),
   R.over(pathLens, path => path.replace('~', homedir())),
 );
+
+export const unzip = (archive: any, path: string): void => {
+  const zip = new admZip(Buffer.from(archive));
+
+  zip.getEntries().forEach((entry) => {
+    console.log('Extract: ', resolve(path, entry.entryName));
+  })
+
+  zip.extractAllTo(resolve(path), true);
+}
