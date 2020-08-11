@@ -149,9 +149,11 @@ async function run(): Promise<void> {
       archive_format: 'zip',
     });
 
+    core.info(`###: Artifact ${name} from ${owner}/${repo} was successfuly downloaded`);
+
     unzip(artifactArchive, path);
 
-    core.info(`###: Artifact ${name} from ${owner}/${repo} was successfuly downloaded`);
+    core.info(`###: Artifact ${name} from ${owner}/${repo} was successfuly extracted`);
   } catch (e) {
     core.setFailed(e.message);
   }
