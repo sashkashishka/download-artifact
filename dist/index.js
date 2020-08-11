@@ -17,7 +17,6 @@ require('assert');
 var util$1 = _interopDefault(require('util'));
 var Stream = _interopDefault(require('stream'));
 var zlib = _interopDefault(require('zlib'));
-var originalFs$1 = _interopDefault(require('original-fs'));
 
 /*! *****************************************************************************
 Copyright (c) Microsoft Corporation.
@@ -7960,6 +7959,8 @@ var when =
 _curry3(function when(pred, whenTrueFn, x) {
   return pred(x) ? whenTrueFn(x) : x;
 });
+
+var originalFs$1 = fs$3;
 
 var require$1 = function() {
   var fs = fs$3;

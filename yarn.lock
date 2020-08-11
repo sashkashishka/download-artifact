@@ -478,6 +478,7 @@ __metadata:
     "@types/adm-zip": ^0
     "@types/ramda": ^0
     adm-zip: 0.4.16
+    original-fs: 1.1.0
     ramda: 0.27.1
     rollup: 2.23.1
     rollup-plugin-typescript2: 0.27.2
@@ -990,6 +991,13 @@ fsevents@~2.1.2:
   dependencies:
     wrappy: 1
   checksum: 57afc246536cf6494437f982b26475f22bee860f8b77ce8eb1543f42a8bffe04b2c66ddfea9a16cb25ccb80943f8ee4fc639367ef97b7a6a4f2672eb573963f5
+  languageName: node
+  linkType: hard
+
+"original-fs@npm:1.1.0":
+  version: 1.1.0
+  resolution: "original-fs@npm:1.1.0"
+  checksum: 4ffc7bb1ea0b373e117e5d82786fa70de70e51272652ddeecdf4e2cd9859df81e594f2d6e65e97372c878b83b14e14103555abbbe52deac759a86a35eee1efcb
   languageName: node
   linkType: hard
 
