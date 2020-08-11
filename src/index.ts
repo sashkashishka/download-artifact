@@ -151,7 +151,7 @@ async function run(): Promise<void> {
 
     core.info(`###: Artifact ${name} from ${owner}/${repo} was successfuly downloaded`);
 
-    unzip(artifactArchive, path);
+    unzip(artifactArchive.data, path);
 
     core.info(`###: Artifact ${name} from ${owner}/${repo} was successfuly extracted`);
   } catch (e) {
